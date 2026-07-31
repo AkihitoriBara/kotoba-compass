@@ -1,8 +1,8 @@
-# Milestone 2
+# Milestone 3
 
 ## Objective
 
-Implement browser integration for reading the user's selected text.
+Implement the browser contextual action chip.
 
 ---
 
@@ -10,14 +10,12 @@ Implement browser integration for reading the user's selected text.
 
 Implement:
 
-- Content Script
-- Extension messaging
-- Active tab communication
-- Selected text retrieval
-- Popup state management
-- Display selected text
-- Loading state
-- Error state
+- Selection observer
+- Floating action chip
+- Chip positioning
+- Open popup workflow
+- Selection persistence
+- Basic animations
 
 ---
 
@@ -25,38 +23,35 @@ Implement:
 
 Do not implement:
 
+- Dictionary engine
 - AI
-- Dictionary
-- Gemini
 - Backend
-- Storage
+- Gemini
 - OCR
+- Grammar analysis
+- Anki
 - Translation
-- Grammar parsing
-- Anki generation
 
 ---
 
 # Acceptance Criteria
 
-The implementation is complete when:
+The milestone is complete when:
 
-- Selecting text on a webpage and opening the popup displays the selected text.
-- Empty selections display the existing empty state.
-- Errors are handled gracefully.
-- Hot reload continues to work.
-- Existing UI remains unchanged except where required to display selected text.
+- Selecting Japanese text displays the contextual action chip.
+- Clicking the chip launches Kotoba Compass.
+- Selected text is preserved.
+- Chip disappears appropriately.
+- Existing browser integration continues to function.
 
 ---
 
 # Notes
 
-Follow the architecture defined in PROJECT_SPECIFICATION.md Chapter 5.
+Follow Chapter 6.
 
-Keep components small and modular.
+Keep the implementation modular.
 
-Use WXT best practices.
+Follow WXT best practices.
 
-Do not implement future milestones.
-
-Stop after Milestone 2.
+Stop after Milestone 3.

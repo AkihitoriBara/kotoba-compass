@@ -31,9 +31,14 @@ const tabContent: Record<
   },
 };
 
-function CompanionPanel() {
+type CompanionPanelProps = {
+  initialSelectedText?: string | null;
+  onClose?: () => void;
+};
+
+function CompanionPanel({ initialSelectedText, onClose }: CompanionPanelProps = {}) {
   const [activeTab, setActiveTab] = useState<PanelTab>('dictionary');
-  const { error, loading, refresh, selectedText } = useSelectedText();
+  const { error, loading, refresh, selectedText } = useSelectedText(initialSelectedText);
   const { description, icon: Icon, title } = tabContent[activeTab];
 
   function renderContent() {
@@ -62,7 +67,8 @@ function CompanionPanel() {
 
   return (
     <main className="flex h-full w-full flex-col overflow-hidden bg-background text-foreground sm:rounded-xl sm:border sm:shadow-sm">
-      <PanelHeader />
+      <PanelHeader onClose={onClose} />
+
       <PanelTabs activeTab={activeTab} onChange={setActiveTab} />
       <div
         aria-labelledby={`${activeTab}-tab`}

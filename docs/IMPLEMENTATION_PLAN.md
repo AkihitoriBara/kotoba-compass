@@ -1,153 +1,83 @@
-# Milestone 2 - Browser Integration
+# Milestone 3 - Contextual Action Chip
 
 ## Objective
 
-Implement the first browser interaction for Kotoba Compass.
-
-The extension should capture the user's currently selected text from the active webpage and display it inside the Dictionary tab.
-
-This milestone establishes the communication architecture between the browser, content scripts, and the popup.
+Allow users to launch Kotoba Compass directly from selected Japanese text without needing to click the browser toolbar.
 
 ---
 
 # User Flow
 
-User highlights Japanese text
+User selects Japanese text
 
 ↓
 
-User opens Kotoba Compass
+Floating Action Chip appears
 
 ↓
 
-Popup requests current selection
+User clicks the chip
 
 ↓
 
-Content Script retrieves selection
+Companion Panel opens
 
 ↓
 
-Popup displays selected text
-
-↓
-
-If no text exists, show the existing empty state.
-
----
-
-# Architecture
-
-Current Webpage
-
-↓
-
-Content Script
-
-↓
-
-Extension Messaging
-
-↓
-
-Popup
-
-↓
-
-React State
-
-↓
-
-Dictionary Tab
+Selected text is transferred into the Dictionary tab
 
 ---
 
 # Components
 
-## Content Script
+## Selection Observer
 
 Responsibilities:
 
-- Read selected text.
-- Respond to popup messages.
-- Return plain text.
-
-No AI.
-
-No dictionary logic.
-
-No translation.
+- Monitor browser text selection.
+- Detect selection changes.
+- Ignore empty selections.
 
 ---
 
-## Popup
+## Floating Action Chip
 
 Responsibilities:
 
-- Request selected text.
-- Store selected text in React state.
-- Display selection.
-- Handle loading state.
-- Handle empty state.
-- Handle messaging failures.
+- Position near the selected text.
+- Animate into view.
+- Dismiss automatically.
+- Launch Kotoba Compass.
 
 ---
 
-# State
+## Positioning Engine
 
-```ts
-selectedText: string | null;
+Responsibilities:
 
-loading: boolean;
-
-error: string | null;
-```
-
----
-
-# Error Handling
-
-No active tab
-
-↓
-
-Display error
-
-No selected text
-
-↓
-
-Display EmptyState
-
-Messaging failure
-
-↓
-
-Display retry message
-
----
-
-# Success Criteria
-
-✅ Select text on any webpage.
-
-✅ Open popup.
-
-✅ Selected text appears.
-
-✅ Empty state still works.
-
-✅ Architecture prepared for future dictionary integration.
+- Calculate screen coordinates.
+- Avoid viewport overflow.
+- Handle scrolling.
+- Handle zoom.
+- Handle resizing.
 
 ---
 
 # Out of Scope
 
-- Dictionary lookup
+- Dictionary lookups
 - AI Tutor
-- Gemini
 - Backend
+- Gemini
 - Anki
-- Translation
-- Grammar analysis
-- OCR
+- Grammar explanations
+
+---
+
+# Success Criteria
+
+- Selecting Japanese text displays the contextual action chip.
+- Clicking the chip opens Kotoba Compass.
+- Previously selected text is preserved.
+- Chip positions correctly near selections.
+- No unnecessary UI appears during normal browsing.

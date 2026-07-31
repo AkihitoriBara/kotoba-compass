@@ -22,7 +22,13 @@ function getSystemTheme(): ResolvedTheme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-function ThemeProvider({ children }: { children: ReactNode }) {
+function ThemeProvider({
+  children,
+  disableDocumentToggle = false,
+}: {
+  children: ReactNode;
+  disableDocumentToggle?: boolean;
+}) {
   const [theme, setTheme] = useState<Theme>('system');
   const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(getSystemTheme);
   const resolvedTheme = theme === 'system' ? systemTheme : theme;
@@ -36,8 +42,11 @@ function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', resolvedTheme === 'dark');
-  }, [resolvedTheme]);
+    if (!disableDocumentToggle) {
+      document.documentElement.classList.toggle('dark', resolvedTheme === 'dark');
+    }
+  }, [resolvedTheme, disableDocumentToggle]);
+
 
   const value = useMemo(
     () => ({ theme, resolvedTheme, setTheme }),

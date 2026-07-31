@@ -3,6 +3,7 @@ import {
   createGetSelectedTextMessage,
   type GetSelectedTextResponse,
 } from '../lib/selection-messages';
+import { getStoredSelectedText } from '../lib/selected-text-storage';
 
 type SelectedTextState = {
   error: string | null;
@@ -22,9 +23,23 @@ function isRestrictedPage(url: string | undefined) {
   );
 }
 
-function useSelectedText() {
-  const [state, setState] = useState<SelectedTextState>(initialState);
+function useSelectedText(initialText?: string | null) {
+  const [state, setState] = useState<SelectedTextState>(() => {
+    if (initialText !== undefined) {
+      return {
+        error: null,
+        loading: false,
+        selectedText: initialText,
+      };
+    }
+    return initialState;
+  });
+
   const refresh = useCallback(async () => {
+    if (initialText !== undefined) {
+      setState({ error: null, loading: false, selectedText: initialText });
+      return;
+    }
     setState({ error: null, loading: true, selectedText: null });
     try {
       const [activeTab] = await browser.tabs.query({
@@ -57,10 +72,12 @@ function useSelectedText() {
         selectedText: null,
       });
     }
-  }, []);
+  }, [initialText]);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
   return { ...state, refresh };
 }
 

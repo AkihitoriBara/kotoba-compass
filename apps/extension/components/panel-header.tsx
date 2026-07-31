@@ -1,4 +1,4 @@
-import { Compass, Monitor, Moon, Settings, Sun } from 'lucide-react';
+import { Compass, Monitor, Moon, Settings, Sun, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { useTheme, type Theme } from './theme-provider';
@@ -9,7 +9,7 @@ const themeOptions: Array<{ value: Theme; label: string; icon: typeof Monitor }>
   { value: 'dark', label: 'Dark', icon: Moon },
 ];
 
-function PanelHeader() {
+function PanelHeader({ onClose }: { onClose?: () => void }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { theme, setTheme } = useTheme();
 
@@ -25,18 +25,32 @@ function PanelHeader() {
             <p className="truncate text-xs text-muted-foreground">Japanese immersion companion</p>
           </div>
         </div>
-        <Button
-          aria-controls="panel-settings"
-          aria-expanded={settingsOpen}
-          aria-label="Open settings"
-          onClick={() => setSettingsOpen((open) => !open)}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <Settings aria-hidden="true" className="size-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            aria-controls="panel-settings"
+            aria-expanded={settingsOpen}
+            aria-label="Open settings"
+            onClick={() => setSettingsOpen((open) => !open)}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <Settings aria-hidden="true" className="size-4" />
+          </Button>
+          {onClose && (
+            <Button
+              aria-label="Close panel"
+              onClick={onClose}
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <X aria-hidden="true" className="size-4" />
+            </Button>
+          )}
+        </div>
       </div>
+
       {settingsOpen ? (
         <div className="mt-3 rounded-xl border bg-card p-3 shadow-sm" id="panel-settings">
           <p className="text-sm font-semibold">Appearance</p>
