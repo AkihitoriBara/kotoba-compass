@@ -3,7 +3,9 @@ import { LanguageAnalysisEngine } from '../lib/analysis/engine';
 import { VocabularyProvider } from '../lib/analysis/vocabulary-provider';
 import { KanjiProvider } from '../lib/analysis/kanji-provider';
 import { NameProvider } from '../lib/analysis/name-provider';
-import { LanguageAnalysisResult } from '../lib/analysis/types';
+import { GrammarProvider } from '../lib/analysis/grammar-provider';
+import { ResultProcessor } from '../lib/analysis/result-processor';
+import { ProcessedAnalysisResult } from '../lib/analysis/types';
 
 let engineInstance: LanguageAnalysisEngine | null = null;
 
@@ -13,13 +15,14 @@ function getEngine(): LanguageAnalysisEngine {
     engineInstance.registerProvider(new VocabularyProvider());
     engineInstance.registerProvider(new KanjiProvider());
     engineInstance.registerProvider(new NameProvider());
+    engineInstance.registerProvider(new GrammarProvider());
   }
   return engineInstance;
 }
 
 export function useAnalysis(text: string | null) {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<LanguageAnalysisResult | null>(null);
+  const [result, setResult] = useState<ProcessedAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,10 +38,13 @@ export function useAnalysis(text: string | null) {
     setError(null);
 
     const engine = getEngine();
+    const processor = new ResultProcessor();
+
     engine.analyze(text)
       .then((res) => {
         if (!isCurrent) return;
-        setResult(res);
+        const processed = processor.process(res);
+        setResult(processed);
         setLoading(false);
       })
       .catch((err) => {

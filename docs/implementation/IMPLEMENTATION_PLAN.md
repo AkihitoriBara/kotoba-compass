@@ -1,162 +1,191 @@
-# Implementation Plan - Milestone 6
-# Name Provider
+# Implementation Plan - Milestone 7.5 (Language Analysis Polish)
 
-This document outlines the architecture, data model, preprocessing pipeline, provider integration, and Companion Panel UI for the Name Provider of the Kotoba Compass Language Analysis Engine.
-
----
-
-## 1. Data Source Recommendation: Yomidan JMnedict Release
-We recommend the pre-built, proper name JSON database release maintained by the Yomitan community:
-- **Download URL**: `https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMnedict.zip`
-- **Why**: JMnedict contains over 740,000 entries of proper nouns (names, places, organizations, stations, works, characters). This source is compact, formatted in a flat array schema, and actively maintained.
+This milestone introduces the **Result Processor**, a post-processing architectural layer of the Language Analysis Engine. It is responsible for centralizing presentation concerns—such as sorting, grouping, deduplicating, and calculating formatting warnings—leaving the providers decoupled and focused purely on structured data retrieval.
 
 ---
 
-## 2. Preprocessing & Build Pipeline
+## 1. Architecture Design
 
-We will create a new build script `scripts/build-jmnedict.ts` in the project root.
+The orchestrating pipeline shifts from direct raw output to post-processed output:
 
-### Pipeline Flow
 ```
-Download ──► Extract ──► Normalize ──► Validate ──► Bucket ──► Write
+LanguageAnalysisEngine.analyze()
+             │  (Raw structured data)
+             ▼
+      ResultProcessor
+             │  (Centralized ranking, grouping, duplicate merging)
+             ▼
+   ProcessedAnalysisResult
+             │  (UI-friendly, sorted collections)
+             ▼
+      Companion Panel
 ```
 
-1. **Download**: Download the `JMnedict.zip` file.
-2. **Extract**: Scan and unzip all `term_bank_*.json` files (containing chunks of proper names) using `adm-zip`.
-3. **Normalize**: Map the array entry values into names, readings, classifications, and gloss meanings. Map raw tag classifications to the unified `NameType` values (e.g., mapping `org` -> `organization` and `work`/`char` -> `fiction`).
-4. **Validate**:
-   - Verify that the `written` expression, `reading` kana, and proper name `type` fields exist.
-   - Ignore any entry where these key fields are missing or malformed, logging warnings for developer visibility.
-5. **Bucket**: Split into **100** hash buckets using `written.charCodeAt(0) % 100` to maintain absolute consistency with the Vocabulary and Kanji Providers.
-6. **Write**: Save the bucket JSON files to `apps/extension/public/dictionaries/names/bucket_*.json`.
-
-### Automation & Repository Rules
-- Preprocessing is automated via `pnpm build:names`.
-- The split JSON bucket files are committed to Git under `apps/extension/public/dictionaries/names/`. This allows developers to use the database immediately without running heavy zip-downloads and compilations locally during setup.
+### Challenge to the Architecture (Cleaner Design)
+*Is a separate processor cleaner than sorting inside the engine?*
+Yes. Keeping ranking and presentation structures distinct from data-collection providers prevents code pollution. Centralizing the presentation logic inside a dedicated `ResultProcessor` ensures that if ranking algorithms, custom grouping, or localization rules change, they are isolated in one place without touching the raw provider logic.
 
 ---
 
-## 3. Data Model
+## 2. Data Models
 
-We will update [types.ts](file:///d:/All%20Coding%20Stuff/kotoba-compass/apps/extension/lib/analysis/types.ts) to define a strongly typed `NameEntry` and `NameType` interface:
+We will update [types.ts](file:///d:/All%20Coding%20Stuff/kotoba-compass/apps/extension/lib/analysis/types.ts) to define the processed models. We avoid duplicate models by reusing existing types:
 
 ```typescript
-export type NameType =
-  | 'person'
-  | 'surname'
-  | 'given'
-  | 'place'
-  | 'company'
-  | 'organization'
-  | 'station'
-  | 'fiction'
-  | 'other';
+export interface ProcessedName {
+  written: string;
+  readings: string[];      // Unified deduplicated readings list
+  meanings: string[];      // Unified deduplicated gloss/definitions list
+  types: NameType[];       // Unified name categorization categories
+  tags?: string[];
+  priority?: number;       // Best priority rank matching this name
+}
 
-export interface NameEntry {
-  written: string;     // The proper noun (e.g., "東京", "山田")
-  reading: string;     // Kana reading (e.g., "とうきょう", "やまだ")
-  meanings: string[];  // English translations/meanings (e.g., ["Tokyo"])
-  type: NameType;      // The mapped proper name classification category
-  tags?: string[];     // Optional tag identifiers for future use
-  priority?: number;   // Optional priority rank for sorting/scoring
+export interface ProcessedGrammarSection {
+  primary?: GrammarResult;
+  alternatives: GrammarResult[];
+}
+
+export interface SectionVisibility {
+  dictionary: boolean;
+  kanji: boolean;
+  names: boolean;
+  grammar: boolean;
+}
+
+export interface AnalysisWarning {
+  code: string;
+  message: string;
+  severity: 'warning' | 'info';
+}
+
+export interface ProcessedAnalysisResult {
+  sourceText: string;
+  dictionary: DictionaryEntry[];
+  kanji: KanjiEntry[];
+  names: ProcessedName[];
+  grammar: ProcessedGrammarSection;
+  sections: SectionVisibility;
+  warnings: AnalysisWarning[];
 }
 ```
 
 ---
 
-## 4. Provider Registry Integration & Architecture
+## 3. Execution Pipeline & Internal Stages
 
-The registry-based plugin model in `LanguageAnalysisEngine` allows us to add the Name Provider without altering the engine's core query pipelines.
+The `ResultProcessor` implements a modular execution pipeline. While exposing a single public interface `process(result)`, it delegates responsibilities internally to dedicated helper classes/functions to keep the code modular and easily extensible.
 
-### Architecture Flow
 ```
-                           ┌─────────────────────────┐
-                           │ LanguageAnalysisEngine  │
-                           └────────────┬────────────┘
-                                        │
-                                        ▼ (Broadcasts candidates)
-              ┌───────────────────────────────────────────┐
-              │        registeredProviders: Array         │
-              └───────┬─────────────────┬───────────┬─────┘
-                      │ (Vocabulary)    │ (Kanji)   │ (Names)
-                      ▼                 ▼           ▼
-            ┌──────────────────┐      ┌──────────┐ ┌────────────┐
-            │VocabularyProvider│      │  Kanji   │ │NameProvider│
-            └──────────────────┘      └──────────┘ └────────────┘
-```
-
-### Provider Data Flow
-Rather than querying independently, the engine uses the candidates resolved from selection to perform enrichment.
-```
-DeinflectionCandidate[] (from selection)
-            │
-            ▼
-NameProvider (queries hashed local public/dictionaries/names/ JSON files)
-            │
-            ▼
-NameEntry[] (appended to analysis result)
+LanguageAnalysisResult
+        │
+        ▼
+[ DictionaryRanker ]  ──► Rank entries by exact match & frequency
+        │
+        ▼
+[   KanjiRanker    ]  ──► Order by sourceText appearance & frequency
+        │
+        ▼
+[   NameMerger     ]  ──► Group & merge duplicate proper names
+        │
+        ▼
+[  GrammarRanker   ]  ──► Order by confidence & dictionary form presence
+        │
+        ▼
+[  SectionBuilder  ]  ──► Build visibility toggles & detect warnings
+        │
+        ▼
+ProcessedAnalysisResult
 ```
 
-### NameProvider Implementation & Caching Details
-1. Extends `LanguageProvider<NameEntry>`.
-2. Loops through incoming `DeinflectionCandidate` word forms, hashes them (`written.charCodeAt(0) % 100`), fetches the bucket asset (`dictionaries/names/bucket_X.json`), and queries the matching name details.
-3. **Runtime Bucket Caching**: Matches the Vocabulary and Kanji Providers by maintaining a private `bucketCache` Map inside `NameProvider`. Loaded bucket array data is cached in memory on the first request to eliminate duplicate fetches during a browsing session.
-4. Returns the compiled array of `NameEntry` objects.
+### A. Dictionary Ranking (`DictionaryRanker`)
+1. **Match Score Assignment**:
+   - Exact word match (`word === sourceText`): 100 points
+   - Exact reading match (`reading === sourceText`): 90 points
+   - Deinflected word match: 50 points
+   - Deinflected reading match: 40 points
+   - No match: 0 points
+2. **Common Tag Bonus**: Add +10 points if `tags` contains `"common"`.
+3. **Sorting Priorities**:
+   - Primary Sort: Matching Score (descending)
+   - Secondary Sort: Frequency rank (ascending/smaller rank number first; entries without a frequency rank are placed last)
+   - Tertiary Sort: Word string length (ascending)
+
+### B. Kanji Ranking (`KanjiRanker`)
+1. **Source Index Sorting**: Preserve the exact order of appearance of characters within the selected text (e.g. for selection `日本語`, `日` is ranked first, `本` second, `語` third).
+2. **Tie-Break**: If multiple entries have equivalent positions in the source text, sort by `frequency` rank (ascending).
+
+### C. Names Grouping & Merging (`NameMerger`)
+- Group raw names by `written` expression.
+- For each group with duplicate written forms, merge properties:
+  - `readings`: Deduplicated union of all readings.
+  - `meanings`: Deduplicated union of all gloss entries.
+  - `types`: Deduplicated union of name types.
+  - `priority`: Best (minimum value) priority ranking of the merged entries.
+- Sort Processed Names:
+  - Exact matches (`written === sourceText`) first.
+  - Sort by `priority` (ascending).
+
+### D. Grammar Sorting (`GrammarRanker`)
+- Sort grammar analyses:
+  - Primary: Confidence rating (`high` > `medium` > `low`).
+  - Secondary: Dictionary confirmation (check if `dictionaryForm` is present in the resolved dictionary entries).
+  - Tertiary: Simplicity (fewer `transformations` timeline steps first).
+- Extraction:
+  - Set the first element of the sorted list as `primary`.
+  - Place all remaining elements in the `alternatives` list.
+
+### E. Section Visibility & Warnings (`SectionBuilder`)
+- **Section Visibility**: Sets boolean flag for each section (`dictionary`, `kanji`, `names`, `grammar`) based on whether it has displayable elements.
+- **Warnings Generation**:
+  - Generate `"NO_ENTRIES_FOUND"` if dictionary, kanji, and name results are all empty.
+  - Generate `"AMBIGUOUS_GRAMMAR"` if `grammar.alternatives` contains any alternative grammar matches with confidence level `'medium'` or `'high'`.
 
 ---
 
-## 5. Companion Panel UI & Mockup
+## 4. UI Layout Mockups
 
-In the **Dictionary** tab, proper names will render as sub-cards below vocabulary entries (or as standalone cards if no vocabulary matches exist).
+The Companion Panel UI will leverage the `sections` metadata to directly toggle visibility of cards, creating a cleaner visual look:
 
-### UI Design Strategy
-- **Visual Badges**: Mapped name categories will display visually distinct tag pills (e.g., purple for `Place`, teal for `Organization`, indigo for `Surname`, rose for `Given Name`) to help learners immediately identify name semantics.
-- **Visual Separators**: Section headers will demarcate "Proper Names" cleanly when mixed results occur.
-
-### UI Mockup
 ```
-┌──────────────────────────────────────────────┐
-│  KOTOBA COMPASS                              │
-├──────────────────────────────────────────────┤
-│  [Dictionary]    [AI Tutor]    [Mining Card] │
-├──────────────────────────────────────────────┤
-│                                              │
-│  Selected: 東京                               │
-│  ┌────────────────────────────────────────┐  │
-│  │  東京 (とうきょう)                       │  │
-│  │  1. Tokyo                              │  │
-│  │  [place]                               │  │
-│  └────────────────────────────────────────┘  │
-│                                              │
-│  Selected: 山田                               │
-│  ┌────────────────────────────────────────┐  │
-│  │  山田 (やまだ)                           │  │
-│  │  1. Yamada (Surname)                   │  │
-│  │  [surname]                             │  │
-│  └────────────────────────────────────────┘  │
-└──────────────────────────────────────────────┘
+[Selected: 葉月]
+
+▼ Names (1)
+  ┌──────────────────────────────────────────────────────────┐
+  │ 葉月                                                     │
+  │ Readings: はづき, はつき                                  │
+  │ [ Given Name ]  [ Surname ]                              │
+  │                                                          │
+  │ Meanings:                                                │
+  │ - Hazuki (given name / surname)                          │
+  └──────────────────────────────────────────────────────────┘
+
+▼ Grammar Analysis
+  ┌──────────────────────────────────────────────────────────┐
+  │ Most Likely Analysis                                     │
+  │ 食べる (verb, ichidan) [High Confidence]                 │
+  │ [ Polite ]  [ Past ]                                     │
+  │ 食べる ──► 食べます ──► 食べました                       │
+  ├──────────────────────────────────────────────────────────┤
+  │ ▶ Other Analyses (2)                                     │
+  └──────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 6. Future Architecture: Configurable Companion Panel Settings
+## 5. Verification Strategy
 
-To support extensibility, future milestones will introduce configurability:
-1. **Extension Settings**: A user-facing settings view allowing users to toggle individual Companion Panel sections independently (e.g. Dictionary, Kanji, Names, Grammar, AI Tutor, Mining Cards).
-2. **Provider Skipping**: The registry orchestrator can check these settings. If a specific section (e.g., Names) is disabled by the user, the engine can skip the corresponding provider query (`NameProvider`) entirely to conserve resources and avoid disk reads.
-3. **Scope for this Milestone**: In this milestone, we will build the underlying registry results, but we will not build the settings UI or add skipped query execution logic.
+We will update our testing suite to assert the following verification queries:
 
----
-
-## 7. Verification Strategy
-
-### Automated Verification
-We will add unit test checks to our test script `C:\Users\Akihitori\.gemini\antigravity-ide\brain\<id>/scratch/test_analysis.ts`:
-- **Place Name**: Query `東京` (expected to return proper name entry classified as `place` with meaning `Tokyo`).
-- **Surname**: Query `山田` (expected to return proper name entry classified as `surname` with meaning `Yamada`).
-- **Given Name**: Query `太郎` (expected to return proper name entry classified as `given` with meaning `Tarou`).
-- **Mixed Match (Multi-Provider)**: Query `京都` (expected to return Vocabulary entry for `京都` AND a proper name entry classified as `place` with meaning `Kyoto`, and both components display).
-- **Non-name/English**: Query `OpenAI` (expected to yield vocabulary/names empty state).
-
-### Manual Verification
-- Highlight `東京` or `山田` on Wikipedia, click the Action Chip, and verify that the Companion Panel displays the name entry card with its respective category pill.
+1. **葉月**:
+   - Asserts names output contains exactly **1 merged ProcessedName card**.
+   - Asserts `readings` contains both `"はづき"` and `"はつき"`.
+   - Asserts `types` contains both `"given"` and `"surname"`.
+2. **東京**:
+   - Asserts name types are sorted with `"place"` appearing before `"surname"`.
+3. **出した**:
+   - Asserts grammar primary result matches dictionary form `"出す"` with high confidence.
+   - Asserts alternative parsed endings (if any) are correctly filed under `alternatives`.
+4. **食べました**:
+   - Asserts grammar primary result matches dictionary form `"食べる"`.
+   - Asserts no duplicate grammar analyses are returned.

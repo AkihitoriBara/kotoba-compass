@@ -4,7 +4,8 @@ import {
   LanguageProvider, 
   DictionaryEntry, 
   KanjiEntry, 
-  NameEntry 
+  NameEntry,
+  GrammarResult 
 } from './types';
 
 export class LanguageAnalysisEngine {
@@ -41,11 +42,25 @@ export class LanguageAnalysisEngine {
     // 2. Generate deinflected candidates
     const candidates = this.deinflector.deinflect(normalized);
 
-    // 3. Query all providers in parallel
+    // 3. Locate vocabulary provider and run it first to establish context
+    const vocabularyProvider = this.providers.find(p => p.name === 'vocabulary');
+    let vocabularyResult: DictionaryEntry[] = [];
+    if (vocabularyProvider) {
+      try {
+        vocabularyResult = await vocabularyProvider.lookup(candidates);
+      } catch (e) {
+        console.error('[LanguageAnalysisEngine] VocabularyProvider lookup failed:', e);
+      }
+    }
+
+    const context = { vocabularyResults: vocabularyResult };
+
+    // 4. Query remaining providers in parallel with the lookup context
+    const remainingProviders = this.providers.filter(p => p.name !== 'vocabulary');
     const lookups = await Promise.all(
-      this.providers.map(async (provider) => {
+      remainingProviders.map(async (provider) => {
         try {
-          const results = await provider.lookup(candidates);
+          const results = await provider.lookup(candidates, context);
           return { name: provider.name, results };
         } catch (e) {
           console.error(`[LanguageAnalysisEngine] Provider "${provider.name}" lookup failed:`, e);
@@ -54,12 +69,12 @@ export class LanguageAnalysisEngine {
       })
     );
 
-    // 4. Merge results from providers
-    const vocabularyResult = lookups.find(l => l.name === 'vocabulary')?.results as DictionaryEntry[] || [];
+    // 5. Merge results from providers
     const kanjiResult = lookups.find(l => l.name === 'kanji')?.results as KanjiEntry[] || [];
     const nameResult = lookups.find(l => l.name === 'names')?.results as NameEntry[] || [];
+    const grammarResult = lookups.find(l => l.name === 'grammar')?.results as GrammarResult[] || [];
 
-    // 5. Rank vocabulary entries:
+    // 6. Rank vocabulary entries:
     // Put entries matching the exact highlighted word form first, followed by deinflected forms.
     const sortedVocabulary = this.rankVocabulary(normalized, vocabularyResult);
 
@@ -68,6 +83,7 @@ export class LanguageAnalysisEngine {
       entries: sortedVocabulary,
       kanji: kanjiResult,
       names: nameResult,
+      grammar: grammarResult,
     };
   }
 

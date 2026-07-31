@@ -100,6 +100,18 @@ const DEINFLECTION_RULES: DeinflectRule[] = [
   { suffix: 'かった', replacement: 'い', rulesApplied: ['past'] },
   { suffix: 'くなかった', replacement: 'い', rulesApplied: ['negative', 'past'] },
   { suffix: 'くて', replacement: 'い', rulesApplied: ['te-form'] },
+
+  // Progressive rules (-te iru / -de iru)
+  { suffix: 'ている', replacement: 'る', rulesApplied: ['progressive'] },
+  { suffix: 'っている', replacement: 'う', rulesApplied: ['progressive'] },
+  { suffix: 'っている', replacement: 'つ', rulesApplied: ['progressive'] },
+  { suffix: 'っている', replacement: 'る', rulesApplied: ['progressive'] },
+  { suffix: 'んでいる', replacement: 'む', rulesApplied: ['progressive'] },
+  { suffix: 'んでいる', replacement: 'ぶ', rulesApplied: ['progressive'] },
+  { suffix: 'んでいる', replacement: 'ぬ', rulesApplied: ['progressive'] },
+  { suffix: 'いている', replacement: 'く', rulesApplied: ['progressive'] },
+  { suffix: 'いでいる', replacement: 'ぐ', rulesApplied: ['progressive'] },
+  { suffix: 'している', replacement: 'す', rulesApplied: ['progressive'] },
 ];
 
 export class Deinflector {

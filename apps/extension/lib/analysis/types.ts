@@ -45,14 +45,95 @@ export interface NameEntry {
   priority?: number;   // Optional priority rank for sorting/scoring
 }
 
+// --- GRAMMAR PROVIDER DATA MODELS ---
+export type PartOfSpeech = 'verb' | 'adjective' | 'noun' | 'particle' | 'auxiliary' | 'other';
+export type VerbClass = 'ichidan' | 'godan' | 'irregular' | 'adjective';
+export type Tense = 'present' | 'past';
+export type Polarity = 'positive' | 'negative';
+export type Politeness = 'plain' | 'polite';
+export type Voice = 'passive' | 'potential' | 'causative' | 'volitional' | 'imperative';
+export type Aspect = 'progressive' | 'perfective';
+export type GrammarForm = 'dictionary' | 'masu' | 'te' | 'ta' | 'nai' | 'other';
+export type GrammarConfidence = 'high' | 'medium' | 'low';
+
+export interface GrammarTransformation {
+  from: string;
+  to: string;
+  reason: string;
+}
+
+export interface GrammarPoint {
+  id: string;          // Stable identifier (e.g. "grammar-polite-past")
+  name: string;        // Display name (e.g. "Polite Past Tense")
+  jlptLevel?: string;  // Optional JLPT level (e.g. "N5")
+}
+
+export interface GrammarResult {
+  sourceText: string;
+  dictionaryForm: string;
+  partOfSpeech: PartOfSpeech;
+  verbClass?: VerbClass;
+  tense?: Tense;
+  polarity?: Polarity;
+  politeness?: Politeness;
+  voice?: Voice[];
+  aspect?: Aspect;
+  form?: GrammarForm;
+  confidence: GrammarConfidence;
+  transformations: GrammarTransformation[];
+  grammarPoints: GrammarPoint[];
+}
+
 export interface LanguageAnalysisResult {
   sourceText: string;
   entries: DictionaryEntry[];
   kanji?: KanjiEntry[];
   names?: NameEntry[];
+  grammar?: GrammarResult[];
+}
+
+export interface ProviderContext {
+  vocabularyResults?: DictionaryEntry[];
 }
 
 export interface LanguageProvider<T> {
   name: string;
-  lookup(candidates: DeinflectionCandidate[]): Promise<T[]>;
+  lookup(candidates: DeinflectionCandidate[], context?: ProviderContext): Promise<T[]>;
+}
+
+// --- CHAPTER 7.5 RESULT PROCESSOR MODELS ---
+export interface ProcessedName {
+  written: string;
+  readings: string[];
+  meanings: string[];
+  types: NameType[];
+  tags?: string[];
+  priority?: number;
+}
+
+export interface ProcessedGrammarSection {
+  primary?: GrammarResult;
+  alternatives: GrammarResult[];
+}
+
+export interface SectionVisibility {
+  dictionary: boolean;
+  kanji: boolean;
+  names: boolean;
+  grammar: boolean;
+}
+
+export interface AnalysisWarning {
+  code: string;
+  severity: 'warning' | 'info';
+}
+
+export interface ProcessedAnalysisResult {
+  sourceText: string;
+  dictionary: DictionaryEntry[];
+  kanji: KanjiEntry[];
+  names: ProcessedName[];
+  grammar: ProcessedGrammarSection;
+  sections: SectionVisibility;
+  warnings: AnalysisWarning[];
 }
