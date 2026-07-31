@@ -1,10 +1,11 @@
 import { BookOpen, Brain, NotebookPen } from 'lucide-react';
 import { useState } from 'react';
 import { useSelectedText } from '../hooks/use-selected-text';
+import { useAnalysis } from '../hooks/use-analysis';
 import { EmptyState } from './empty-state';
 import { PanelHeader } from './panel-header';
 import { PanelTabs, type PanelTab } from './panel-tabs';
-import { SelectedText } from './selected-text';
+import { DictionaryResult } from './dictionary-result';
 import { SelectionErrorState } from './selection-error-state';
 import { SelectionLoadingState } from './selection-loading-state';
 
@@ -39,6 +40,7 @@ type CompanionPanelProps = {
 function CompanionPanel({ initialSelectedText, onClose }: CompanionPanelProps = {}) {
   const [activeTab, setActiveTab] = useState<PanelTab>('dictionary');
   const { error, loading, refresh, selectedText } = useSelectedText(initialSelectedText);
+  const { error: analysisError, loading: analyzing, result } = useAnalysis(selectedText);
   const { description, icon: Icon, title } = tabContent[activeTab];
 
   function renderContent() {
@@ -55,7 +57,19 @@ function CompanionPanel({ initialSelectedText, onClose }: CompanionPanelProps = 
       return (
         <SelectionErrorState error={error} onRetry={() => void refresh()} />
       );
-    if (selectedText) return <SelectedText text={selectedText} />;
+    if (selectedText) {
+      if (analyzing) return <SelectionLoadingState />;
+      if (analysisError) {
+        return (
+          <div className="flex flex-1 flex-col items-center justify-center p-6 text-center text-sm text-red-500">
+            {analysisError}
+          </div>
+        );
+      }
+      if (result) {
+        return <DictionaryResult entries={result.entries} sourceText={result.sourceText} />;
+      }
+    }
     return (
       <EmptyState
         description={description}

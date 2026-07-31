@@ -6,3 +6,4 @@
 - [04 Design System](04-design-system.md)
 - [05 Extension Architecture](05-extension-architecture.md)
 - [06 Contextual Actions](06-contextual-actions.md)
+- [07 Language Analysis Engine](07-language-analysis-engine.md)

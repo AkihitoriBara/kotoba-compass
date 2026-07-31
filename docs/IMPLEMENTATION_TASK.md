@@ -1,57 +1,80 @@
-# Milestone 3
+# Implementation Task
+# Milestone 4
 
-## Objective
+## Goal
 
-Implement the browser contextual action chip.
-
----
-
-# Scope
-
-Implement:
-
-- Selection observer
-- Floating action chip
-- Chip positioning
-- Open popup workflow
-- Selection persistence
-- Basic animations
+Build the first version of the Language Analysis Engine.
 
 ---
 
-# Out of Scope
+## Read
 
-Do not implement:
-
-- Dictionary engine
-- AI
-- Backend
-- Gemini
-- OCR
-- Grammar analysis
-- Anki
-- Translation
+- specification/05-extension-architecture.md
+- specification/06-contextual-actions.md
+- specification/07-Language Analysis Engine.md
 
 ---
 
-# Acceptance Criteria
+## In Scope
 
-The milestone is complete when:
+✔ Create LanguageAnalysisEngine
 
-- Selecting Japanese text displays the contextual action chip.
-- Clicking the chip launches Kotoba Compass.
-- Selected text is preserved.
-- Chip disappears appropriately.
-- Existing browser integration continues to function.
+✔ Create DictionaryEntry interface
+
+✔ Create VocabularyProvider
+
+✔ Integrate a local dictionary
+
+✔ Return structured lookup results
+
+✔ Display results inside Companion Panel
+
+✔ Loading state
+
+✔ Error state
 
 ---
 
-# Notes
+## Out of Scope
 
-Follow [Chapter 6](specification/06-contextual-actions.md).
+✘ AI Tutor
 
-Keep the implementation modular.
+✘ Grammar explanations
 
-Follow WXT best practices.
+✘ Kanji lookup
 
-Stop after Milestone 3.
+✘ Name lookup
+
+✘ Flashcards
+
+✘ Backend API
+
+✘ Sentence analysis
+
+---
+
+## Success Criteria
+
+Selecting:
+
+食べました
+
+should display
+
+Dictionary Form
+
+食べる
+
+Reading
+
+たべる
+
+Meaning
+
+to eat
+
+inside the Companion Panel.
+
+No network request should occur.
+
+Everything should function locally.
