@@ -1,18 +1,27 @@
 import { BookOpen, Brain, NotebookPen } from 'lucide-react';
 import { useState } from 'react';
+import { useSelectedText } from '../hooks/use-selected-text';
 import { EmptyState } from './empty-state';
 import { PanelHeader } from './panel-header';
 import { PanelTabs, type PanelTab } from './panel-tabs';
+import { SelectedText } from './selected-text';
+import { SelectionErrorState } from './selection-error-state';
+import { SelectionLoadingState } from './selection-loading-state';
 
-const tabContent: Record<PanelTab, { description: string; icon: typeof BookOpen; title: string }> = {
+const tabContent: Record<
+  PanelTab,
+  { description: string; icon: typeof BookOpen; title: string }
+> = {
   dictionary: {
     title: 'No text selected',
-    description: 'Highlight Japanese text to begin exploring its meaning and usage.',
+    description:
+      'Highlight Japanese text to begin exploring its meaning and usage.',
     icon: BookOpen,
   },
   tutor: {
     title: 'Start a conversation',
-    description: 'Select Japanese text to ask the AI Tutor about grammar and nuance.',
+    description:
+      'Select Japanese text to ask the AI Tutor about grammar and nuance.',
     icon: Brain,
   },
   cards: {
@@ -24,7 +33,32 @@ const tabContent: Record<PanelTab, { description: string; icon: typeof BookOpen;
 
 function CompanionPanel() {
   const [activeTab, setActiveTab] = useState<PanelTab>('dictionary');
+  const { error, loading, refresh, selectedText } = useSelectedText();
   const { description, icon: Icon, title } = tabContent[activeTab];
+
+  function renderContent() {
+    if (activeTab !== 'dictionary')
+      return (
+        <EmptyState
+          description={description}
+          icon={<Icon aria-hidden="true" className="size-5" />}
+          title={title}
+        />
+      );
+    if (loading) return <SelectionLoadingState />;
+    if (error)
+      return (
+        <SelectionErrorState error={error} onRetry={() => void refresh()} />
+      );
+    if (selectedText) return <SelectedText text={selectedText} />;
+    return (
+      <EmptyState
+        description={description}
+        icon={<Icon aria-hidden="true" className="size-5" />}
+        title={title}
+      />
+    );
+  }
 
   return (
     <main className="flex h-full w-full flex-col overflow-hidden bg-background text-foreground sm:rounded-xl sm:border sm:shadow-sm">
@@ -36,10 +70,12 @@ function CompanionPanel() {
         id={`${activeTab}-panel`}
         role="tabpanel"
       >
-        <EmptyState description={description} icon={<Icon aria-hidden="true" className="size-5" />} title={title} />
+        {renderContent()}
       </div>
       <footer className="border-t px-4 py-3">
-        <p className="text-center text-xs text-muted-foreground">Ready when you find something interesting.</p>
+        <p className="text-center text-xs text-muted-foreground">
+          Ready when you find something interesting.
+        </p>
       </footer>
     </main>
   );
