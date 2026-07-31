@@ -1,49 +1,62 @@
-# Current Milestone
+# Milestone 2
 
-## Milestone 1 — Extension UI Foundation
+## Objective
 
-### Objective
-
-Implement the UI foundation for the browser extension exactly as described in `PROJECT_SPECIFICATION.md`.
-
-This milestone establishes the design system and Companion Panel shell only.
+Implement browser integration for reading the user's selected text.
 
 ---
 
-## Scope
+# Scope
 
-- Initialize shadcn/ui.
-- Configure the application theme.
-- Support both Dark Mode and Light Mode.
-- Create the Companion Panel shell.
-- Create the header.
-- Create the three primary tabs.
-- Create placeholder screens for each tab.
-- Implement the layout, spacing and typography defined in the specification.
-- Implement reusable UI components where appropriate.
+Implement:
 
----
-
-## Out of Scope
-
-Do **not** implement:
-
-- Dictionary functionality
-- AI Tutor functionality
-- Browser interaction
-- Highlight detection
-- Backend communication
-- Anki integration
-- Card generation logic
-- Business logic
+- Content Script
+- Extension messaging
+- Active tab communication
+- Selected text retrieval
+- Popup state management
+- Display selected text
+- Loading state
+- Error state
 
 ---
 
-## Acceptance Criteria
+# Out of Scope
 
-- Companion Panel renders successfully.
-- Theme system is functional.
-- Tabs switch correctly.
-- Layout matches the specification.
-- Components are reusable.
-- Project builds successfully.
+Do not implement:
+
+- AI
+- Dictionary
+- Gemini
+- Backend
+- Storage
+- OCR
+- Translation
+- Grammar parsing
+- Anki generation
+
+---
+
+# Acceptance Criteria
+
+The implementation is complete when:
+
+- Selecting text on a webpage and opening the popup displays the selected text.
+- Empty selections display the existing empty state.
+- Errors are handled gracefully.
+- Hot reload continues to work.
+- Existing UI remains unchanged except where required to display selected text.
+
+---
+
+# Notes
+
+Follow the architecture defined in PROJECT_SPECIFICATION.md Chapter 5.
+
+Keep components small and modular.
+
+Use WXT best practices.
+
+Do not implement future milestones.
+
+Stop after Milestone 2.
