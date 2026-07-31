@@ -25,8 +25,24 @@ export interface KanjiEntry {
   grade?: number;       // School grade level
 }
 
+export type NameType =
+  | 'person'
+  | 'surname'
+  | 'given'
+  | 'place'
+  | 'company'
+  | 'organization'
+  | 'station'
+  | 'fiction'
+  | 'other';
+
 export interface NameEntry {
-  // Placeholder for future JMnedict integration
+  written: string;     // The proper noun (e.g. "東京")
+  reading: string;     // Kana reading (e.g. "とうきょう")
+  meanings: string[];  // English meanings (e.g. ["Tokyo"])
+  type: NameType;      // Proper name classification category
+  tags?: string[];     // Optional tag identifiers
+  priority?: number;   // Optional priority rank for sorting/scoring
 }
 
 export interface LanguageAnalysisResult {
