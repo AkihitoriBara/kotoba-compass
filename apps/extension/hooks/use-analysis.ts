@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LanguageAnalysisEngine } from '../lib/analysis/engine';
 import { VocabularyProvider } from '../lib/analysis/vocabulary-provider';
+import { KanjiProvider } from '../lib/analysis/kanji-provider';
 import { LanguageAnalysisResult } from '../lib/analysis/types';
 
 let engineInstance: LanguageAnalysisEngine | null = null;
@@ -9,6 +10,7 @@ function getEngine(): LanguageAnalysisEngine {
   if (!engineInstance) {
     engineInstance = new LanguageAnalysisEngine();
     engineInstance.registerProvider(new VocabularyProvider());
+    engineInstance.registerProvider(new KanjiProvider());
   }
   return engineInstance;
 }

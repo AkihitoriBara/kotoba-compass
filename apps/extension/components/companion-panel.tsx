@@ -67,7 +67,7 @@ function CompanionPanel({ initialSelectedText, onClose }: CompanionPanelProps = 
         );
       }
       if (result) {
-        return <DictionaryResult entries={result.entries} sourceText={result.sourceText} />;
+        return <DictionaryResult entries={result.entries} kanji={result.kanji} sourceText={result.sourceText} />;
       }
     }
     return (

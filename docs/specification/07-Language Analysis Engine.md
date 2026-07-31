@@ -315,3 +315,23 @@ to eat
 No AI functionality is included in this milestone.
 
 Grammar explanations, sentence analysis, and tutoring are introduced in later chapters.
+
+# Milestone 5
+
+Objective
+
+Implement the Kanji Provider.
+
+Responsibilities
+
+- Parse KANJIDIC2
+- Generate optimized lookup files
+- Create KanjiEntry
+- Extend LanguageAnalysisEngine
+- Display Kanji metadata
+
+Deferred
+
+- Grammar
+- Names
+- AI

@@ -14,7 +14,15 @@ export interface DeinflectionCandidate {
 }
 
 export interface KanjiEntry {
-  // Placeholder for future KANJIDIC integration
+  kanji: string;        // The kanji character (e.g. "猫")
+  onyomi: string[];     // Onyomi readings in katakana (e.g. ["ビョウ"])
+  kunyomi: string[];    // Kunyomi readings in hiragana (e.g. ["ねこ"])
+  meanings: string[];   // English meanings/glosses (e.g. ["cat"])
+  strokeCount: number;  // Number of strokes (e.g. 11)
+  radical?: string;     // Radical representation/tag (e.g. "犬")
+  jlptLevel?: number;   // JLPT level
+  frequency?: number;   // Frequency rank
+  grade?: number;       // School grade level
 }
 
 export interface NameEntry {

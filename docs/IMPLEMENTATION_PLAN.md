@@ -1,204 +1,159 @@
-# Implementation Plan - Milestone 4
-# Language Analysis Engine (Phase 1)
+# Implementation Plan - Milestone 5
+# Kanji Provider
 
-This document outlines the architecture, data structures, and implementation tasks for Phase 1 of the **Language Analysis Engine**. 
-
-The goal of this milestone is to implement the local Vocabulary lookup system (via JMdict), allowing the in-page Companion Panel to resolve selected Japanese words into their base forms, readings, and definitions offline.
+This document outlines the architecture, data model, build pipeline, and user interface for the **Kanji Provider** integration of the Kotoba Compass Language Analysis Engine.
 
 ---
 
-## 1. Dictionary Selection & Recommendation
+## 1. KANJIDIC2 Data Source & Recommendation
 
-### Recommended Dictionary: JMdict (English)
-We recommend **JMdict** (maintained by EDRDG). It is the industry standard for Japanese dictionary lookups, covering over 180,000 entries with detailed readings, parts of speech, and glosses.
-
-### Data Format Optimization
-We will use a pre-processed version of JMdict in a simplified, array-based JSON format (similar to the format used by Yomitan dictionaries). This format strips out verbose XML tags and structure, compressing the entire dictionary database down to a lightweight footprint suitable for extension bundling.
+### Recommended Source: Yomidan KANJIDIC English Release
+We recommend downloading the pre-processed KANJIDIC2 English zip release maintained by the Yomitan community:
+- **Download URL**: `https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/KANJIDIC_english.zip`
+- **Why**: This source is updated regularly, maps directly to EDRDG KANJIDIC2 definitions, and utilizes a highly compact array-based JSON format (`kanji_bank_1.json`) which strips out heavy XML tagging.
 
 ---
 
-## 2. Local Storage Strategy & Directory Structure
+## 2. Preprocessing & Build Pipeline
 
-Instead of using a heavy database like IndexedDB (which requires a slow 5–10 second import stage on the first run and can suffer from storage capacity limits or profile corruption), we will use a **Prefix-Split Hash-Bucket JSON** system.
+We will create a new build script `scripts/build-kanjidic.ts` in the project root.
 
-### Directory Structure
-To prepare the extension for future providers, assets will be organized into specific subdirectories:
+### Pipeline Flow
 ```
-apps/extension/assets/dictionaries/
-├── vocabulary/     <-- Hashed JSON buckets for JMdict (Milestone 4)
-├── kanji/          <-- Placeholder for future KANJIDIC files
-└── names/          <-- Placeholder for future JMnedict files
+Download ──► Extract ──► Normalize ──► Validate ──► Bucket ──► Write
 ```
 
-### Hash-Bucket Structure
-- The JMdict lexicon will be split at build time into 100 individual JSON bucket files located under the `vocabulary` directory:
-  `assets/dictionaries/vocabulary/bucket_0.json` to `assets/dictionaries/vocabulary/bucket_99.json`
-- The hash function determines the bucket for a word based on its first character:
-  `const bucketIndex = word.charCodeAt(0) % 100;`
-- Each JSON bucket file contains an array of words hashed to that index (averaging ~1,800 entries per bucket, resulting in files of ~150KB).
+1. **Download**: Download the raw zip from the repository release.
+2. **Extract**: Extract `kanji_bank_1.json` using `adm-zip`.
+3. **Normalize**: Map array indices to structured records, parsing fields like Kunyomi, Onyomi, stroke count, meanings, and radical.
+4. **Validate**:
+   - Check that required fields (`kanji`, `meanings`, `strokeCount`) are present.
+   - Verify that `strokeCount` is a valid numeric value.
+   - Check that the `kanji` character is a valid single-character kanji (using standard Unicode range `[\u4e00-\u9faf]`).
+   - Log warnings and skip any entries that are malformed.
+5. **Bucket**: Split into **100** hash buckets using `kanji.charCodeAt(0) % 100` to remain consistent with the Vocabulary Provider hash strategy.
+6. **Write**: Write JSON files under `public/dictionaries/kanji/bucket_*.json`.
 
-### Lookup Sequence
-1. The extension computes the bucket index for the query text.
-2. It fetches the corresponding bucket file asynchronously:
-   `await fetch(browser.runtime.getURL(`assets/dictionaries/vocabulary/bucket_${bucketIndex}.json`))`
-3. It parses the JSON file (taking <2ms) and filters the records in memory for exact matches.
-4. Lookup latency is expected to be under **15–20ms**, running entirely offline with zero background memory footprint when idle.
-
----
-
-## 3. Dictionary Build Pipeline Clarification
-
-### How the Dictionary is Obtained and Converted
-1. **Source Data**: We obtain a raw JSON release of the EDRDG JMdict file (from the community-supported `jmdict-simplified` project).
-2. **Build Preprocessing**: We write a node script `scripts/build-dictionary.js` in the project root. This script:
-   - Reads the raw JSON dictionary file.
-   - Cleans up metadata and strips verbose fields (like non-English definitions or redundant tags).
-   - Formats the entries into minimized arrays to save space.
-   - Hashes words based on their first character and writes them into the 100 split bucket JSON files under `apps/extension/assets/dictionaries/vocabulary/`.
-
-### Automation and Repository Rules
-- **One-time Generation & Git Commit**: The preprocessed bucket JSON files are **committed to Git** as static assets. Because the dictionary data is stable, this avoids requiring every developer to download and build a 150MB raw database during standard workspace setup.
-- **Source vs. Artifact boundaries**:
-  - `scripts/build-dictionary.js` is a **source code file** and is committed to Git.
-  - The raw input JSON database file is **excluded** from Git via `.gitignore`.
-  - The preprocessed split bucket files (`assets/dictionaries/vocabulary/bucket_*.json`) are committed to Git.
+### Automation & Repository Rules
+- Preprocessing is automated via `pnpm build:kanji` (executed as a one-time build step).
+- The split JSON bucket files are committed to Git under `apps/extension/public/dictionaries/kanji/`. This prevents requiring developers to download and parse a 6MB raw database during standard setup.
 
 ---
 
-## 4. Deinflection Strategy Justification
+## 3. Data Model
 
-Our pipeline performs **Deinflection Upfront**:
-```
-Selection ──► Normalization ──► Deinflection ──► Dictionary Lookup
-```
-Instead of a fallback-based deinflection (`Lookup -> If not found -> Deinflect -> Lookup`):
-
-### Why Deinflection Upfront is Better
-1. **Parallel Execution**:
-   In the Registry Provider pattern, all registered providers (Vocabulary, Kanji, Names) execute their queries in parallel. By generating a list of candidate stems (`DeinflectionCandidate[]`) upfront, the engine can broadcast these candidates to all providers in a single parallel sweep. 
-   If we used a fallback-based sequence, the execution path would become strictly sequential (Vocabulary first, then deinflect, then query vocabulary again, then query names), adding latency and complicating the registry pipeline.
-2. **Exposing Inflection Pathways for Grammar Explanations**:
-   The upfront deinflection step generates not only candidates but also their **inflection pathways** (the grammatical suffixes stripped, such as `polite + past` or `causative + passive`). 
-   Surfacing this grammar pathway data is a key requirement of the project specification (Chapter 7), as future AI Tutor and grammar components will consume this pathway to explain sentences to the user without needing to recalculate verb stems themselves.
-3. **No Overhead**:
-   The exact selected text is always included as the first candidate in the list (with `rulesApplied = []`). Looking up a few candidate stems along with the original word is highly optimized, adding negligible overhead in our hashed-bucket file loader.
-
----
-
-## 5. Data Interfaces
-
-We will define clean, standardized, and strongly typed TypeScript interfaces for dictionary records and the engine's query results:
+We will update [types.ts](file:///d:/All%20Coding%20Stuff/kotoba-compass/apps/extension/lib/analysis/types.ts) to define a strongly typed `KanjiEntry` interface, replacing the current empty placeholder:
 
 ```typescript
-export interface DictionaryEntry {
-  word: string;           // Base/dictionary form (e.g., "食べる")
-  reading: string;        // Kana reading (e.g., "たべる")
-  meanings: string[];     // English definition glosses
-  partOfSpeech: string[]; // Grammatical tags (e.g., ["v1", "vt"])
-  jlpt?: string;          // JLPT level (e.g., "N5")
-  frequency?: number;     // Word frequency rank (optional)
-  tags?: string[];        // Additional tags (e.g., "common")
-}
-
-export interface DeinflectionCandidate {
-  text: string;           // The deinflected word form
-  rulesApplied: string[]; // List of grammar rules applied in reverse
-}
-
-// Strong type definitions for future modules
 export interface KanjiEntry {
-  // To be populated in future milestones
-}
-
-export interface NameEntry {
-  // To be populated in future milestones
-}
-
-export interface LanguageAnalysisResult {
-  sourceText: string;         // Original highlighted selection (e.g., "食べました")
-  entries: DictionaryEntry[]; // Vocabulary matches found
-  kanji?: KanjiEntry[];       // Strongly typed Kanji entries (placeholder)
-  names?: NameEntry[];        // Strongly typed Name entries (placeholder)
+  kanji: string;        // The kanji character (e.g. "猫")
+  onyomi: string[];     // Onyomi readings in katakana (e.g. ["ビョウ"])
+  kunyomi: string[];    // Kunyomi readings in hiragana (e.g. ["ねこ"])
+  meanings: string[];   // English meanings/glosses (e.g. ["cat"])
+  strokeCount: number;  // Number of strokes (e.g. 11)
+  radical?: string;     // Radical representation/tag (e.g. "犬")
+  jlptLevel?: number;   // JLPT level (e.g., 5 for N5, 1 for N1)
+  frequency?: number;   // Frequency rank (e.g., 100 for top-100)
+  grade?: number;       // School grade level (1-6 for elementary, 8 for general)
 }
 ```
 
 ---
 
-## 6. Language Analysis Engine Architecture
+## 4. Provider Registry Integration & Architecture
 
-The analysis engine is built around a plug-and-play **Provider Registry Pattern**.
+The registry-based plugin model in `LanguageAnalysisEngine` allows us to add the Kanji Provider without altering the engine's core query pipelines.
 
-```typescript
-export interface LanguageProvider {
-  name: string;
-  lookup(candidates: DeinflectionCandidate[]): Promise<any[]>;
-}
+### Architecture Flow
+```
+                           ┌─────────────────────────┐
+                           │ LanguageAnalysisEngine  │
+                           └────────────┬────────────┘
+                                        │
+                                        ▼ (Broadcasts candidates)
+                       ┌─────────────────────────────────┐
+                       │   registeredProviders: Array    │
+                       └───────┬─────────────────┬───────┘
+                               │ (Vocabulary)    │ (Kanji)
+                               ▼                 ▼
+                     ┌──────────────────┐      ┌──────────────────┐
+                     │VocabularyProvider│      │  KanjiProvider   │
+                     └──────────────────┘      └──────────────────┘
+```
 
-export class LanguageAnalysisEngine {
-  private providers: LanguageProvider[] = [];
-  private deinflector: Deinflector;
+### Provider Data Flow
+Rather than querying independently, the engine uses the candidates resolved from selection to perform enrichment.
+```
+DictionaryEntry[] (from VocabularyProvider)
+            │
+            ▼
+Extract Unique Kanji (regex filters unique kanji characters)
+            │
+            ▼
+KanjiProvider (queries hashed local JSON files)
+            │
+            ▼
+KanjiEntry[] (appended to analysis result)
+```
 
-  constructor() {
-    this.deinflector = new Deinflector();
-  }
+### KanjiProvider Implementation Details
+1. Extends `LanguageProvider<KanjiEntry>`.
+2. Extracts unique kanji characters from incoming `DeinflectionCandidate` word forms using a regex helper:
+   `const kanjiChars = [...new Set(candidates.flatMap(c => c.text.match(/[\u4e00-\u9faf]/g) || []))];`
+3. Loops through each unique kanji character, hashes it (`kanji.charCodeAt(0) % 100` for consistency), fetches its bucket asset (`dictionaries/kanji/bucket_X.json`), and queries the matching kanji details.
+4. Returns the compiled array of `KanjiEntry` objects.
 
-  public registerProvider(provider: LanguageProvider): void {
-    this.providers.push(provider);
-  }
+---
 
-  public async analyze(text: string): Promise<LanguageAnalysisResult> {
-    const normalized = text.trim().normalize('NFC');
-    const candidates = this.deinflector.deinflect(normalized);
-    
-    // Run all registered providers in parallel
-    const providerLookups = await Promise.all(
-      this.providers.map(async (provider) => {
-        try {
-          return {
-            name: provider.name,
-            entries: await provider.lookup(candidates),
-          };
-        } catch (e) {
-          console.error(`[LanguageAnalysisEngine] Provider ${provider.name} failed:`, e);
-          return { name: provider.name, entries: [] };
-        }
-      })
-    );
+## 5. Companion Panel UI & Mockup
 
-    // Merge lookups
-    const vocabResult = providerLookups.find((p) => p.name === 'vocabulary');
-    const kanjiResult = providerLookups.find((p) => p.name === 'kanji');
-    const nameResult = providerLookups.find((p) => p.name === 'names');
-    
-    return {
-      sourceText: text,
-      entries: vocabResult ? vocabResult.entries : [],
-      kanji: kanjiResult ? kanjiResult.entries : [],
-      names: nameResult ? nameResult.entries : [],
-    };
-  }
-}
+In the **Dictionary** tab, resolved kanji details will render below the primary vocabulary entry card.
+
+### UI Design Strategy
+- **Visual Rhythm**: Kanji entries will fade in sequentially below the vocabulary card to create a smooth, native look.
+- **Badge pills**: Onyomi and Kunyomi will be visually styled with distinct background pills (e.g., light blue for Onyomi, light orange for Kunyomi) to help learners distinguish Chinese vs. Japanese readings easily.
+- **Radical and Strokes**: Compact, metadata pills aligned in a header row.
+
+### UI Mockup
+```
+┌──────────────────────────────────────────────┐
+│  KOTOBA COMPASS                              │
+├──────────────────────────────────────────────┤
+│  [Dictionary]    [AI Tutor]    [Mining Card] │
+├──────────────────────────────────────────────┤
+│                                              │
+│  Selected: 猫                                 │
+│  ┌────────────────────────────────────────┐  │
+│  │  猫 (ねこ)                             │  │
+│  │  1. cat (esp. domestic)                │  │
+│  │  [noun]                                │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+│  Kanji Characters                            │
+│  ┌────────────────────────────────────────┐  │
+│  │  猫                                     │  │
+│  │  Strokes: 11   Radical: 犬             │  │
+│  │                                        │  │
+│  │  On:  [ ビョウ ]                       │  │
+│  │  Kun: [ ねこ ]                         │  │
+│  │                                        │  │
+│  │  Meanings:                             │  │
+│  │  1. cat                                │  │
+│  └────────────────────────────────────────┘  │
+│                                              │
+└──────────────────────────────────────────────┘
 ```
 
 ---
 
-## 7. Proposed Changes
+## 6. Verification Strategy
 
-We will create and update the following files:
+### Automated Verification
+We will add unit test checks to our test script `C:\Users\Akihitori\.gemini\antigravity-ide\brain\<id>/scratch/test_analysis.ts`:
+- **Word**: Query `猫` (expected to return the vocabulary meaning "cat" AND a matching `KanjiEntry` for `猫` with 11 strokes, Kunyomi "ねこ", Onyomi "ビョウ").
+- **Multiple Kanji Word**: Query `漢字` (expected to return vocabulary entry AND exactly two `KanjiEntry` objects for `漢` and `字` respectively).
+- **Mixed Kanji/Kana Word**: Query `食べる` (expected to return vocabulary entry for `食べる` AND exactly one `KanjiEntry` corresponding to `食`. Kana characters `べる` must be ignored).
+- **Kana Only**: Query `たべる` (expected to return vocabulary entry but no Kanji entries).
 
-### New Directories
-- `apps/extension/assets/dictionaries/vocabulary/` (contains split JSON dictionary files)
-- `apps/extension/assets/dictionaries/kanji/` (placeholder)
-- `apps/extension/assets/dictionaries/names/` (placeholder)
-- `apps/extension/lib/analysis/` (contains engine, providers, and deinflector)
-
-### New Files
-- **`apps/extension/lib/analysis/deinflector.ts`**: Rule-based deinflection class. Generates word stems from suffix replacement tables.
-- **`apps/extension/lib/analysis/vocabulary-provider.ts`**: Vocabulary lookup class. Performs hashing, loads asset buckets, and matches entries.
-- **`apps/extension/lib/analysis/engine.ts`**: Orchestrates normalization, deinflection, provider execution, and result merging.
-- **`apps/extension/components/dictionary-result.tsx`**: React view representing the dictionary form, reading, and definitions in a clean card format.
-
-### Modified Files
-- **`apps/extension/components/companion-panel.tsx`**: Show the `DictionaryResult` card when dictionary analysis completes successfully.
-- **`apps/extension/hooks/use-selected-text.ts`**: Integrate `LanguageAnalysisEngine` to handle selected text resolution.
-- **`wxt.config.ts`**: Configure WXT to treat the `assets/dictionaries/**/*.json` files as public resources so they are bundled into `.output/` and accessible via `browser.runtime.getURL`.
+### Manual Verification
+- Highlight `猫` on Wikipedia, click the Action Chip, and verify the Companion Panel renders both the vocabulary card and the kanji details sub-cards.
