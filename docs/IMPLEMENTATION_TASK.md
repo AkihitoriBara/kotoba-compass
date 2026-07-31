@@ -1,30 +1,26 @@
 # Current Milestone
 
-## Milestone 0 — Repository Foundation
+## Milestone 1 — Extension UI Foundation
 
 ### Objective
 
-Implement the initial project scaffolding exactly as described in `PROJECT_SPECIFICATION.md`.
+Implement the UI foundation for the browser extension exactly as described in `PROJECT_SPECIFICATION.md`.
 
-This milestone establishes the development environment only.
+This milestone establishes the design system and Companion Panel shell only.
 
 ---
 
 ## Scope
 
-- Configure a pnpm workspace.
-- Create the monorepo structure.
-- Initialize the browser extension using WXT.
-- Initialize the Express backend.
-- Create shared packages.
-- Configure TypeScript.
-- Configure ESLint.
-- Configure Prettier.
-- Configure Tailwind CSS.
-- Configure shadcn/ui.
-- Configure environment variable handling.
-- Configure project scripts.
-- Ensure the project builds successfully.
+- Initialize shadcn/ui.
+- Configure the application theme.
+- Support both Dark Mode and Light Mode.
+- Create the Companion Panel shell.
+- Create the header.
+- Create the three primary tabs.
+- Create placeholder screens for each tab.
+- Implement the layout, spacing and typography defined in the specification.
+- Implement reusable UI components where appropriate.
 
 ---
 
@@ -32,24 +28,22 @@ This milestone establishes the development environment only.
 
 Do **not** implement:
 
-- Dictionary lookup
-- AI Tutor
-- Gemini integration
-- Backend endpoints
+- Dictionary functionality
+- AI Tutor functionality
 - Browser interaction
-- Text selection
-- Companion Panel
-- Card Generator
+- Highlight detection
+- Backend communication
 - Anki integration
+- Card generation logic
 - Business logic
-- Application UI beyond the default scaffold
 
 ---
 
 ## Acceptance Criteria
 
-- All dependencies install successfully.
-- The workspace builds without errors.
-- TypeScript passes.
-- Linting passes.
-- Folder structure follows the specification.
+- Companion Panel renders successfully.
+- Theme system is functional.
+- Tabs switch correctly.
+- Layout matches the specification.
+- Components are reusable.
+- Project builds successfully.
