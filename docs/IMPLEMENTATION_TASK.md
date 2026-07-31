@@ -48,7 +48,7 @@ The milestone is complete when:
 
 # Notes
 
-Follow Chapter 6.
+Follow [Chapter 6](specification/06-contextual-actions.md).
 
 Keep the implementation modular.
 
