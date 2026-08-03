@@ -1,4 +1,4 @@
-import { DeinflectionCandidate, GrammarResult, LanguageProvider, ProviderContext, VerbClass, PartOfSpeech, GrammarTransformation, GrammarPoint, Voice } from './types';
+import { DeinflectionCandidate, GrammarResult, LanguageProvider, AnalysisContext, VerbClass, PartOfSpeech, GrammarTransformation, GrammarPoint, Voice } from './types';
 
 /**
  * Standard rule-based conjugation generator to reconstruct verb and adjective transitions.
@@ -126,9 +126,9 @@ function conjugate(currentForm: string, rule: string, verbClass: VerbClass): { t
 export class GrammarProvider implements LanguageProvider<GrammarResult> {
   public name = 'grammar';
 
-  public async lookup(candidates: DeinflectionCandidate[], context?: ProviderContext): Promise<GrammarResult[]> {
+  public async lookup(candidates: DeinflectionCandidate[], context?: AnalysisContext): Promise<GrammarResult[]> {
     const results: GrammarResult[] = [];
-    const vocabularyResults = context?.vocabularyResults || [];
+    const dictionaryEntries = context?.dictionaryEntries || [];
 
     for (const candidate of candidates) {
       // Only perform analysis on candidates that have grammar pathways applied,
@@ -137,7 +137,7 @@ export class GrammarProvider implements LanguageProvider<GrammarResult> {
       const dictForm = candidate.text;
 
       // Locate corresponding dictionary entry to determine POS and Verb Class
-      const matchedEntry = vocabularyResults.find(
+      const matchedEntry = dictionaryEntries.find(
         (entry) => entry.word === dictForm || entry.reading === dictForm
       );
 

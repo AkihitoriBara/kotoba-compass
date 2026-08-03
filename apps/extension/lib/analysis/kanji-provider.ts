@@ -6,7 +6,10 @@ interface RawKanji {
   kun: string[];// kunyomi
   m: string[];  // meanings
   s: number;    // strokes
-  r?: string;   // radical
+  r?: {         // radical info
+    s: string;  // symbol
+    n: number;  // number
+  };
   jlpt?: number;// jlpt level
   freq?: number;// frequency rank
   g?: number;   // grade
@@ -52,7 +55,7 @@ export class KanjiProvider implements LanguageProvider<KanjiEntry> {
             kunyomi: match.kun,
             meanings: match.m,
             strokeCount: match.s,
-            radical: match.r,
+            radical: match.r ? { symbol: match.r.s, number: match.r.n } : undefined,
             jlptLevel: match.jlpt,
             frequency: match.freq,
             grade: match.g,

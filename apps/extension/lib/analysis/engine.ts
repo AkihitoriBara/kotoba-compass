@@ -5,8 +5,11 @@ import {
   DictionaryEntry, 
   KanjiEntry, 
   NameEntry,
-  GrammarResult 
+  GrammarResult,
+  AnalysisContext,
+  TranslationResult
 } from './types';
+import { DictionaryRanker } from './ranking/dictionary-ranker';
 
 export class LanguageAnalysisEngine {
   private providers: LanguageProvider<any>[] = [];
@@ -26,7 +29,7 @@ export class LanguageAnalysisEngine {
   /**
    * Runs the complete selection analysis pipeline.
    */
-  public async analyze(text: string): Promise<LanguageAnalysisResult> {
+  public async analyze(text: string, context?: AnalysisContext): Promise<LanguageAnalysisResult> {
     if (!text || !text.trim()) {
       return {
         sourceText: '',
@@ -53,14 +56,29 @@ export class LanguageAnalysisEngine {
       }
     }
 
-    const context = { vocabularyResults: vocabularyResult };
+    // Rank vocabulary entries using DictionaryRanker
+    const sortedVocabulary = DictionaryRanker.rank(vocabularyResult, normalized);
+
+    // Build the analysis context to distribute to remaining providers
+    const runContext: AnalysisContext = {
+      ...context,
+      dictionaryEntries: sortedVocabulary,
+    };
 
     // 4. Query remaining providers in parallel with the lookup context
-    const remainingProviders = this.providers.filter(p => p.name !== 'vocabulary');
+    const remainingProviders = this.providers.filter(p => {
+      if (p.name === 'vocabulary') return false;
+      if (p.name === 'translation') {
+        // Do not execute if translation is disabled
+        return !!context?.settings?.translationEnabled;
+      }
+      return true;
+    });
+
     const lookups = await Promise.all(
       remainingProviders.map(async (provider) => {
         try {
-          const results = await provider.lookup(candidates, context);
+          const results = await provider.lookup(candidates, runContext);
           return { name: provider.name, results };
         } catch (e) {
           console.error(`[LanguageAnalysisEngine] Provider "${provider.name}" lookup failed:`, e);
@@ -73,10 +91,7 @@ export class LanguageAnalysisEngine {
     const kanjiResult = lookups.find(l => l.name === 'kanji')?.results as KanjiEntry[] || [];
     const nameResult = lookups.find(l => l.name === 'names')?.results as NameEntry[] || [];
     const grammarResult = lookups.find(l => l.name === 'grammar')?.results as GrammarResult[] || [];
-
-    // 6. Rank vocabulary entries:
-    // Put entries matching the exact highlighted word form first, followed by deinflected forms.
-    const sortedVocabulary = this.rankVocabulary(normalized, vocabularyResult);
+    const translationResult = lookups.find(l => l.name === 'translation')?.results as TranslationResult[] || [];
 
     return {
       sourceText: text,
@@ -84,20 +99,7 @@ export class LanguageAnalysisEngine {
       kanji: kanjiResult,
       names: nameResult,
       grammar: grammarResult,
+      translation: translationResult[0],
     };
-  }
-
-  /**
-   * Sorts vocabulary matches to show original exact matches before deinflected candidates.
-   */
-  private rankVocabulary(sourceText: string, entries: DictionaryEntry[]): DictionaryEntry[] {
-    return [...entries].sort((a, b) => {
-      const aIsExact = a.word === sourceText || a.reading === sourceText;
-      const bIsExact = b.word === sourceText || b.reading === sourceText;
-      
-      if (aIsExact && !bIsExact) return -1;
-      if (!aIsExact && bIsExact) return 1;
-      return 0;
-    });
   }
 }

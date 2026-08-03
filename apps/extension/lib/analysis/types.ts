@@ -19,7 +19,10 @@ export interface KanjiEntry {
   kunyomi: string[];    // Kunyomi readings in hiragana (e.g. ["ねこ"])
   meanings: string[];   // English meanings/glosses (e.g. ["cat"])
   strokeCount: number;  // Number of strokes (e.g. 11)
-  radical?: string;     // Radical representation/tag (e.g. "犬")
+  radical?: {
+    symbol: string;
+    number: number;
+  };
   jlptLevel?: number;   // JLPT level
   frequency?: number;   // Frequency rank
   grade?: number;       // School grade level
@@ -84,21 +87,43 @@ export interface GrammarResult {
   grammarPoints: GrammarPoint[];
 }
 
+export type TranslationMode = 'off' | 'word' | 'sentence' | 'paragraph';
+
+export type TranslationProviderType = 'offline' | 'ai';
+
+export interface TranslationResult {
+  sourceText: string;
+  translatedText?: string;
+  mode: TranslationMode;
+  provider: TranslationProviderType;
+  available: boolean;
+  message?: string;
+}
+
+export interface AnalysisSettings {
+  translationEnabled: boolean;
+  translationMode: TranslationMode;
+  providerPreference: TranslationProviderType;
+  automaticTranslation: boolean;
+}
+
 export interface LanguageAnalysisResult {
   sourceText: string;
   entries: DictionaryEntry[];
   kanji?: KanjiEntry[];
   names?: NameEntry[];
   grammar?: GrammarResult[];
+  translation?: TranslationResult;
 }
 
-export interface ProviderContext {
-  vocabularyResults?: DictionaryEntry[];
+export interface AnalysisContext {
+  settings?: AnalysisSettings;
+  dictionaryEntries?: DictionaryEntry[];
 }
 
 export interface LanguageProvider<T> {
   name: string;
-  lookup(candidates: DeinflectionCandidate[], context?: ProviderContext): Promise<T[]>;
+  lookup(candidates: DeinflectionCandidate[], context?: AnalysisContext): Promise<T[]>;
 }
 
 // --- CHAPTER 7.5 RESULT PROCESSOR MODELS ---
@@ -121,6 +146,7 @@ export interface SectionVisibility {
   kanji: boolean;
   names: boolean;
   grammar: boolean;
+  translation: boolean;
 }
 
 export interface AnalysisWarning {
@@ -136,4 +162,5 @@ export interface ProcessedAnalysisResult {
   grammar: ProcessedGrammarSection;
   sections: SectionVisibility;
   warnings: AnalysisWarning[];
+  translation?: TranslationResult;
 }

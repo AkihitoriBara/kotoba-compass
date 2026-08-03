@@ -1,4 +1,4 @@
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Languages } from 'lucide-react';
 import {
   DictionaryEntry,
   KanjiEntry,
@@ -7,6 +7,7 @@ import {
   SectionVisibility,
   AnalysisWarning,
   GrammarResult,
+  TranslationResult,
 } from '../lib/analysis/types';
 
 type DictionaryResultProps = {
@@ -17,6 +18,7 @@ type DictionaryResultProps = {
   sections: SectionVisibility;
   warnings: AnalysisWarning[];
   sourceText: string;
+  translation?: TranslationResult;
 };
 
 const nameTypeLabels: Record<string, string> = {
@@ -163,9 +165,10 @@ function DictionaryResult({
   sections,
   warnings,
   sourceText,
+  translation,
 }: DictionaryResultProps) {
 
-  if (!sections.dictionary && !sections.kanji && !sections.names && !sections.grammar) {
+  if (!sections.dictionary && !sections.kanji && !sections.names && !sections.grammar && !sections.translation) {
     return (
       <section className="flex flex-1 flex-col items-center justify-center p-6 text-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -220,6 +223,39 @@ function DictionaryResult({
           {sourceText}
         </span>
       </div>
+
+      {/* Translation Section */}
+      {sections.translation && translation && (
+        <div className="space-y-3">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 transition-all hover:bg-primary/10">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary select-none">
+              <Languages className="size-4" />
+              <span>Context Translation</span>
+            </div>
+
+            {translation.available ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm font-semibold text-foreground leading-relaxed">
+                  {translation.translatedText}
+                </p>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground border-t border-primary/10 pt-2.5 mt-2.5">
+                  <span className="capitalize">Mode: {translation.mode}</span>
+                  <span className="capitalize">Provider: {translation.provider}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-1">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  {translation.mode} translation
+                </p>
+                <p className="text-sm font-medium text-foreground">
+                  {translation.message || 'Translation unavailable'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Dictionary Section */}
       {sections.dictionary && (
@@ -313,7 +349,10 @@ function DictionaryResult({
                       </span>
                       {kEntry.radical && (
                         <span className="bg-muted px-2 py-0.5 rounded">
-                          Radical: <span className="font-bold text-foreground">{kEntry.radical}</span>
+                          Radical: <span className="font-bold text-foreground">
+                            {kEntry.radical.symbol}
+                            {kEntry.radical.number ? ` (${kEntry.radical.number})` : ''}
+                          </span>
                         </span>
                       )}
                       {kEntry.jlptLevel && (
