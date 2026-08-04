@@ -10,6 +10,7 @@ import { DictionaryResult } from './dictionary-result';
 import { SelectionErrorState } from './selection-error-state';
 import { SelectionLoadingState } from './selection-loading-state';
 import { SettingsPage } from './settings/settings-page';
+import { TutorView } from './tutor/tutor-view';
 
 const tabContent: Record<
   PanelTab,
@@ -56,6 +57,9 @@ function CompanionPanel({ initialSelectedText, onClose }: CompanionPanelProps = 
   const { description, icon: Icon, title } = tabContent[activeTab];
 
   function renderContent() {
+    if (activeTab === 'tutor') {
+      return <TutorView analysisResult={result} />;
+    }
     if (activeTab !== 'dictionary')
       return (
         <EmptyState
