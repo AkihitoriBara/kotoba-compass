@@ -15,13 +15,15 @@ export class TranslationProvider implements LanguageProvider<TranslationResult> 
     }
 
     const settings = context?.settings;
-    if (!settings || !settings.translationEnabled || settings.translationMode === 'off') {
+    const isEnabled = settings?.translation?.enabled ?? settings?.translationEnabled;
+    const mode = settings?.translation?.mode ?? settings?.translationMode ?? 'off';
+    const provider = settings?.translation?.providerPreference ?? settings?.providerPreference ?? 'offline';
+
+    if (!settings || !isEnabled || mode === 'off') {
       return [];
     }
 
     const sourceText = candidates[0].text;
-    const mode = settings.translationMode;
-    const provider = settings.providerPreference;
 
     if (mode === 'word') {
       const dictionaryEntries = context?.dictionaryEntries || [];

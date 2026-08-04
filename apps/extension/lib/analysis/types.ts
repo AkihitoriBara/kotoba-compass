@@ -100,12 +100,51 @@ export interface TranslationResult {
   message?: string;
 }
 
-export interface AnalysisSettings {
-  translationEnabled: boolean;
-  translationMode: TranslationMode;
-  providerPreference: TranslationProviderType;
-  automaticTranslation: boolean;
+export type FrontCardFormat = 'word' | 'sentence' | 'cloze';
+
+export interface GeneralSettings {
+  theme: 'system' | 'light' | 'dark';
 }
+
+export interface DictionarySettings {
+  vocabulary: boolean;
+  kanji: boolean;
+  names: boolean;
+  grammar: boolean;
+}
+
+export interface TranslationSettings {
+  enabled: boolean;
+  mode: TranslationMode;
+  providerPreference?: TranslationProviderType;
+}
+
+export interface MiningSettings {
+  frontCardFormat: FrontCardFormat;
+  furiganaOnFront: boolean;
+  showFrontFuriganaWarning: boolean;
+}
+
+export interface AiTutorSettings {
+  // Reserved for future milestones
+}
+
+export interface KotobaSettings {
+  version: number;
+  general: GeneralSettings;
+  dictionary: DictionarySettings;
+  translation: TranslationSettings;
+  mining: MiningSettings;
+  aiTutor: AiTutorSettings;
+
+  // Backward compatibility top-level fields
+  translationEnabled?: boolean;
+  translationMode?: TranslationMode;
+  providerPreference?: TranslationProviderType;
+  automaticTranslation?: boolean;
+}
+
+export type AnalysisSettings = KotobaSettings;
 
 export interface LanguageAnalysisResult {
   sourceText: string;
@@ -117,7 +156,7 @@ export interface LanguageAnalysisResult {
 }
 
 export interface AnalysisContext {
-  settings?: AnalysisSettings;
+  settings?: KotobaSettings;
   dictionaryEntries?: DictionaryEntry[];
 }
 

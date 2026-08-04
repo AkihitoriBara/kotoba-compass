@@ -6,8 +6,8 @@ import { NameProvider } from '../lib/analysis/name-provider';
 import { GrammarProvider } from '../lib/analysis/grammar-provider';
 import { TranslationProvider } from '../lib/analysis/translation-provider';
 import { ResultProcessor } from '../lib/analysis/result-processor';
-import { ProcessedAnalysisResult } from '../lib/analysis/types';
-import { getAnalysisSettings } from '../lib/analysis-settings-storage';
+import { ProcessedAnalysisResult, KotobaSettings } from '../lib/analysis/types';
+import { loadSettings } from '../lib/analysis-settings-storage';
 
 let engineInstance: LanguageAnalysisEngine | null = null;
 
@@ -23,7 +23,7 @@ function getEngine(): LanguageAnalysisEngine {
   return engineInstance;
 }
 
-export function useAnalysis(text: string | null) {
+export function useAnalysis(text: string | null, settings?: KotobaSettings | null) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ProcessedAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,12 +43,14 @@ export function useAnalysis(text: string | null) {
     const engine = getEngine();
     const processor = new ResultProcessor();
 
-    getAnalysisSettings()
-      .then((settings) => {
+    const getSettingsPromise = settings ? Promise.resolve(settings) : loadSettings();
+
+    getSettingsPromise
+      .then((activeSettings) => {
         if (!isCurrent) return;
-        return engine.analyze(text, { settings }).then((res) => {
+        return engine.analyze(text, { settings: activeSettings }).then((res) => {
           if (!isCurrent) return;
-          const processed = processor.process(res);
+          const processed = processor.process(res, activeSettings);
           setResult(processed);
           setLoading(false);
         });
@@ -63,7 +65,7 @@ export function useAnalysis(text: string | null) {
     return () => {
       isCurrent = false;
     };
-  }, [text]);
+  }, [text, settings]);
 
   return { loading, result, error };
 }

@@ -1,17 +1,47 @@
-import { Compass, Monitor, Moon, Settings, Sun, X } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, Compass, Settings, X } from 'lucide-react';
 import { Button } from './ui/button';
-import { useTheme, type Theme } from './theme-provider';
 
-const themeOptions: Array<{ value: Theme; label: string; icon: typeof Monitor }> = [
-  { value: 'system', label: 'System', icon: Monitor },
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-];
+type PanelHeaderProps = {
+  onClose?: () => void;
+  isSettingsView?: boolean;
+  onOpenSettings?: () => void;
+  onBack?: () => void;
+};
 
-function PanelHeader({ onClose }: { onClose?: () => void }) {
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
+function PanelHeader({ onClose, isSettingsView = false, onOpenSettings, onBack }: PanelHeaderProps) {
+  if (isSettingsView) {
+    return (
+      <header className="sticky top-0 z-10 border-b bg-background/95 px-4 py-3 backdrop-blur">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              aria-label="Back to main view"
+              onClick={onBack}
+              size="default"
+              type="button"
+              variant="ghost"
+              className="h-8 px-2 text-xs font-semibold gap-1 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              <span>Back</span>
+            </Button>
+            <h2 className="text-sm font-bold text-foreground">Settings</h2>
+          </div>
+          {onClose && (
+            <Button
+              aria-label="Close panel"
+              onClick={onClose}
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <X aria-hidden="true" className="size-4" />
+            </Button>
+          )}
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="sticky top-0 z-10 border-b bg-background/95 px-4 py-3 backdrop-blur">
@@ -27,10 +57,8 @@ function PanelHeader({ onClose }: { onClose?: () => void }) {
         </div>
         <div className="flex items-center gap-1">
           <Button
-            aria-controls="panel-settings"
-            aria-expanded={settingsOpen}
             aria-label="Open settings"
-            onClick={() => setSettingsOpen((open) => !open)}
+            onClick={onOpenSettings}
             size="icon"
             type="button"
             variant="ghost"
@@ -50,27 +78,6 @@ function PanelHeader({ onClose }: { onClose?: () => void }) {
           )}
         </div>
       </div>
-
-      {settingsOpen ? (
-        <div className="mt-3 rounded-xl border bg-card p-3 shadow-sm" id="panel-settings">
-          <p className="text-sm font-semibold">Appearance</p>
-          <div className="mt-2 grid grid-cols-3 gap-2" role="group" aria-label="Theme preference">
-            {themeOptions.map(({ value, label, icon: Icon }) => (
-              <Button
-                aria-pressed={theme === value}
-                className="h-auto flex-col gap-1.5 py-2 text-xs"
-                key={value}
-                onClick={() => setTheme(value)}
-                type="button"
-                variant={theme === value ? 'primary' : 'secondary'}
-              >
-                <Icon aria-hidden="true" className="size-4" />
-                {label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </header>
   );
 }

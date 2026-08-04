@@ -45,10 +45,11 @@ export class LanguageAnalysisEngine {
     // 2. Generate deinflected candidates
     const candidates = this.deinflector.deinflect(normalized);
 
-    // 3. Locate vocabulary provider and run it first to establish context
+    // 3. Locate vocabulary provider and run it first if enabled to establish context
     const vocabularyProvider = this.providers.find(p => p.name === 'vocabulary');
     let vocabularyResult: DictionaryEntry[] = [];
-    if (vocabularyProvider) {
+    const isVocabEnabled = context?.settings?.dictionary?.vocabulary ?? true;
+    if (vocabularyProvider && isVocabEnabled) {
       try {
         vocabularyResult = await vocabularyProvider.lookup(candidates);
       } catch (e) {
@@ -66,11 +67,15 @@ export class LanguageAnalysisEngine {
     };
 
     // 4. Query remaining providers in parallel with the lookup context
+    const dictSettings = context?.settings?.dictionary;
     const remainingProviders = this.providers.filter(p => {
       if (p.name === 'vocabulary') return false;
+      if (p.name === 'kanji' && dictSettings && !dictSettings.kanji) return false;
+      if (p.name === 'names' && dictSettings && !dictSettings.names) return false;
+      if (p.name === 'grammar' && dictSettings && !dictSettings.grammar) return false;
       if (p.name === 'translation') {
-        // Do not execute if translation is disabled
-        return !!context?.settings?.translationEnabled;
+        const transEnabled = context?.settings?.translation?.enabled ?? context?.settings?.translationEnabled;
+        return !!transEnabled;
       }
       return true;
     });

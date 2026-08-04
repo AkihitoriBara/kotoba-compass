@@ -10,6 +10,7 @@ import {
   SectionVisibility,
   AnalysisWarning,
   TranslationResult,
+  KotobaSettings,
 } from './types';
 import { DictionaryRanker } from './ranking/dictionary-ranker';
 import { KanjiRanker } from './ranking/kanji-ranker';
@@ -28,15 +29,18 @@ class SectionBuilder {
     kanji: KanjiEntry[],
     names: ProcessedName[],
     grammar: ProcessedGrammarSection,
-    translation?: TranslationResult
+    translation?: TranslationResult,
+    settings?: KotobaSettings
   ): { sections: SectionVisibility; warnings: AnalysisWarning[] } {
-    
+    const dictSettings = settings?.dictionary;
+    const transSettings = settings?.translation;
+
     const sections: SectionVisibility = {
-      dictionary: dictionary.length > 0,
-      kanji: kanji.length > 0,
-      names: names.length > 0,
-      grammar: grammar.primary !== undefined,
-      translation: translation !== undefined,
+      dictionary: (dictSettings?.vocabulary ?? true) && dictionary.length > 0,
+      kanji: (dictSettings?.kanji ?? true) && kanji.length > 0,
+      names: (dictSettings?.names ?? true) && names.length > 0,
+      grammar: (dictSettings?.grammar ?? true) && grammar.primary !== undefined,
+      translation: (transSettings?.enabled ?? settings?.translationEnabled ?? false) && translation !== undefined,
     };
 
     const warnings: AnalysisWarning[] = [];
@@ -67,7 +71,7 @@ class SectionBuilder {
  * Centralized post-processor that pipelines raw analysis output into ranked and merged results.
  */
 export class ResultProcessor {
-  public process(result: LanguageAnalysisResult): ProcessedAnalysisResult {
+  public process(result: LanguageAnalysisResult, settings?: KotobaSettings): ProcessedAnalysisResult {
     const rawVocab = result.entries || [];
     const rawKanji = result.kanji || [];
     const rawNames = result.names || [];
@@ -78,7 +82,7 @@ export class ResultProcessor {
     const kanji = KanjiRanker.rank(rawKanji, result.sourceText);
     const names = NameMerger.process(rawNames, result.sourceText);
     const grammar = GrammarRanker.process(rawGrammar, dictionary);
-    const { sections, warnings } = SectionBuilder.build(dictionary, kanji, names, grammar, result.translation);
+    const { sections, warnings } = SectionBuilder.build(dictionary, kanji, names, grammar, result.translation, settings);
 
     // Architectural Decision:
     // Translation results are for quick comprehension assistance and do not participate in ranking.

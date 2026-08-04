@@ -2,12 +2,14 @@ import { BookOpen, Brain, NotebookPen } from 'lucide-react';
 import { useState } from 'react';
 import { useSelectedText } from '../hooks/use-selected-text';
 import { useAnalysis } from '../hooks/use-analysis';
+import { useSettings } from '../hooks/use-settings';
 import { EmptyState } from './empty-state';
 import { PanelHeader } from './panel-header';
 import { PanelTabs, type PanelTab } from './panel-tabs';
 import { DictionaryResult } from './dictionary-result';
 import { SelectionErrorState } from './selection-error-state';
 import { SelectionLoadingState } from './selection-loading-state';
+import { SettingsPage } from './settings/settings-page';
 
 const tabContent: Record<
   PanelTab,
@@ -39,8 +41,18 @@ type CompanionPanelProps = {
 
 function CompanionPanel({ initialSelectedText, onClose }: CompanionPanelProps = {}) {
   const [activeTab, setActiveTab] = useState<PanelTab>('dictionary');
+  const [currentView, setCurrentView] = useState<'main' | 'settings'>('main');
+
+  const {
+    settings,
+    updateSettings,
+    resetSettings,
+    exportSettings,
+    importSettingsJson,
+  } = useSettings();
+
   const { error, loading, refresh, selectedText } = useSelectedText(initialSelectedText);
-  const { error: analysisError, loading: analyzing, result } = useAnalysis(selectedText);
+  const { error: analysisError, loading: analyzing, result } = useAnalysis(selectedText, settings);
   const { description, icon: Icon, title } = tabContent[activeTab];
 
   function renderContent() {
@@ -76,6 +88,7 @@ function CompanionPanel({ initialSelectedText, onClose }: CompanionPanelProps = 
             sections={result.sections}
             warnings={result.warnings}
             sourceText={result.sourceText}
+            translation={result.translation}
           />
         );
       }
@@ -89,22 +102,42 @@ function CompanionPanel({ initialSelectedText, onClose }: CompanionPanelProps = 
     );
   }
 
+  const isSettingsView = currentView === 'settings';
+
   return (
     <main className="flex h-full w-full flex-col overflow-hidden bg-background text-foreground sm:rounded-xl sm:border sm:shadow-sm">
-      <PanelHeader onClose={onClose} />
+      <PanelHeader
+        onClose={onClose}
+        isSettingsView={isSettingsView}
+        onOpenSettings={() => setCurrentView('settings')}
+        onBack={() => setCurrentView('main')}
+      />
 
-      <PanelTabs activeTab={activeTab} onChange={setActiveTab} />
-      <div
-        aria-labelledby={`${activeTab}-tab`}
-        className="flex min-h-0 flex-1 overflow-y-auto"
-        id={`${activeTab}-panel`}
-        role="tabpanel"
-      >
-        {renderContent()}
-      </div>
+      {isSettingsView ? (
+        <SettingsPage
+          settings={settings}
+          onUpdate={updateSettings}
+          onReset={resetSettings}
+          onExport={exportSettings}
+          onImportJson={importSettingsJson}
+        />
+      ) : (
+        <>
+          <PanelTabs activeTab={activeTab} onChange={setActiveTab} />
+          <div
+            aria-labelledby={`${activeTab}-tab`}
+            className="flex min-h-0 flex-1 overflow-y-auto"
+            id={`${activeTab}-panel`}
+            role="tabpanel"
+          >
+            {renderContent()}
+          </div>
+        </>
+      )}
+
       <footer className="border-t px-4 py-3">
         <p className="text-center text-xs text-muted-foreground">
-          Ready when you find something interesting.
+          {isSettingsView ? 'Kotoba Compass Settings' : 'Ready when you find something interesting.'}
         </p>
       </footer>
     </main>
