@@ -1,8 +1,11 @@
 import { CardBack } from '../../lib/card-generator/types';
-import { BookOpen, Sparkles, Volume2 } from 'lucide-react';
+import { CardEnhancement } from '../../lib/card-enhancement/types';
+import { BookOpen, Sparkles, Volume2, Loader2, Lightbulb } from 'lucide-react';
 
 type BackPreviewProps = {
   back: CardBack;
+  enhancement?: CardEnhancement;
+  loadingEnhancement?: boolean;
 };
 
 function formatPartOfSpeech(tag: string): string {
@@ -18,7 +21,7 @@ function formatPartOfSpeech(tag: string): string {
   return tag.charAt(0).toUpperCase() + tag.slice(1);
 }
 
-export function BackPreview({ back }: BackPreviewProps) {
+export function BackPreview({ back, enhancement, loadingEnhancement }: BackPreviewProps) {
   const primaryMeaning = back.meanings[0] || 'No definition available';
   const additionalMeanings = back.meanings.slice(1);
 
@@ -116,7 +119,7 @@ export function BackPreview({ back }: BackPreviewProps) {
         </>
       )}
 
-      {/* Context Translation */}
+      {/* Sentence Translation */}
       {back.translation && (
         <div className="rounded-xl border border-border/60 bg-card/60 p-2.5 text-xs dark:border-border/30">
           <span className="font-semibold text-foreground">Sentence Translation: </span>
@@ -124,17 +127,48 @@ export function BackPreview({ back }: BackPreviewProps) {
         </div>
       )}
 
-      {/* Future Feature Placeholders */}
+      {/* AI Card Enhancement Section */}
       <div className="border-b border-border/15 dark:border-border/10" />
-      <div className="space-y-2">
-        <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-2.5 text-xs text-muted-foreground/80">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-3.5 text-primary/70" />
-            <span className="font-medium">AI Example Sentence</span>
-          </div>
-          <span className="text-[10px] italic">Available in next milestone</span>
-        </div>
 
+      {loadingEnhancement ? (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs space-y-2 animate-pulse">
+          <div className="flex items-center gap-2 font-semibold text-primary">
+            <Loader2 className="size-3.5 animate-spin" /> Generating AI Enhancement...
+          </div>
+          <div className="h-3.5 w-3/4 rounded bg-primary/10" />
+          <div className="h-3.5 w-1/2 rounded bg-primary/10" />
+        </div>
+      ) : enhancement ? (
+        <div className="rounded-xl border border-primary/25 bg-primary/5 p-3 text-xs space-y-2 dark:border-primary/20">
+          <div className="flex items-center justify-between font-semibold text-primary">
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="size-3.5" /> AI Card Enhancement
+            </span>
+            <span className="text-[10px] text-muted-foreground font-normal">
+              {enhancement.providerName}
+            </span>
+          </div>
+
+          {/* Example Sentence & Translation */}
+          <div className="rounded-lg border border-border/40 bg-card/60 p-2.5 space-y-1 dark:bg-card/40">
+            <p className="font-japanese text-xs font-semibold text-foreground">
+              {enhancement.exampleSentence}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {enhancement.exampleTranslation}
+            </p>
+          </div>
+
+          {/* Usage Note */}
+          {enhancement.usageNote && (
+            <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+              <Lightbulb className="size-3.5 text-amber-500 shrink-0 mt-0.5" />
+              <span>{enhancement.usageNote}</span>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Future Audio Placeholder */
         <div className="flex items-center justify-between rounded-xl border border-border/40 bg-muted/20 p-2.5 text-xs text-muted-foreground/80">
           <div className="flex items-center gap-2">
             <Volume2 className="size-3.5 text-primary/70" />
@@ -142,7 +176,7 @@ export function BackPreview({ back }: BackPreviewProps) {
           </div>
           <span className="text-[10px] italic">Coming soon</span>
         </div>
-      </div>
+      )}
     </div>
   );
 }

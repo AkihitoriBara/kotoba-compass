@@ -1,5 +1,6 @@
 import { defineConfig } from 'wxt';
 import tailwindcss from '@tailwindcss/vite';
+import path from 'path';
 
 export default defineConfig({
   manifest: {
@@ -15,6 +16,8 @@ export default defineConfig({
   },
   modules: ['@wxt-dev/module-react'],
   vite: () => ({
+    envDir: path.resolve(__dirname, '../'),
+    envPrefix: ['VITE_', 'WXT_', 'GEMINI_'],
     plugins: [tailwindcss()],
   }),
 });

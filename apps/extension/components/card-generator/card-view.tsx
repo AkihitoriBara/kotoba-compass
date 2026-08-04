@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { NotebookPen, Download, CheckCircle2, AlertCircle } from 'lucide-react';
 import { ProcessedAnalysisResult, KotobaSettings } from '../../lib/analysis/types';
 import { CardTemplate } from '../../lib/card-generator/types';
 import { CardGenerator } from '../../lib/card-generator/card-generator';
+import { CardEnhancement } from '../../lib/card-enhancement/types';
+import { CardEnhancementService } from '../../lib/card-enhancement/enhancement-service';
 import { TemplateSelector } from './template-selector';
 import { CardPreview } from './card-preview';
 
@@ -15,6 +17,8 @@ export function CardView({ analysisResult, settings }: CardViewProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<CardTemplate>(
     settings.mining?.frontCardFormat || 'word'
   );
+  const [enhancement, setEnhancement] = useState<CardEnhancement | undefined>(undefined);
+  const [loadingEnhancement, setLoadingEnhancement] = useState<boolean>(false);
 
   const cardData = useMemo(() => {
     if (!analysisResult) return null;
@@ -25,6 +29,40 @@ export function CardView({ analysisResult, settings }: CardViewProps) {
       overrideTemplate: selectedTemplate,
     });
   }, [analysisResult, settings, selectedTemplate]);
+
+  // Asynchronously request card enhancement without blocking card generation
+  useEffect(() => {
+    if (!cardData?.card) {
+      setEnhancement(undefined);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingEnhancement(true);
+
+    const enhancementService = CardEnhancementService.getInstance();
+    enhancementService
+      .enhanceCard({ card: cardData.card })
+      .then((res) => {
+        if (isMounted) {
+          setEnhancement(res);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setEnhancement(undefined);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingEnhancement(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cardData?.card]);
 
   if (!analysisResult) {
     return (
@@ -58,8 +96,12 @@ export function CardView({ analysisResult, settings }: CardViewProps) {
         />
       </div>
 
-      {/* Card Preview Component */}
-      <CardPreview card={card} />
+      {/* Card Preview Component with AI Enhancement */}
+      <CardPreview
+        card={card}
+        enhancement={enhancement}
+        loadingEnhancement={loadingEnhancement}
+      />
 
       {/* User-Oriented Card Summary Metadata */}
       <div className="rounded-xl border border-border/60 bg-card/70 p-3 text-xs space-y-2 dark:border-border/30 dark:bg-card/40 shadow-2xs">

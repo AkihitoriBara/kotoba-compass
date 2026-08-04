@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { RotateCw } from 'lucide-react';
 import { GeneratedCard } from '../../lib/card-generator/types';
+import { CardEnhancement } from '../../lib/card-enhancement/types';
 import { FrontPreview } from './front-preview';
 import { BackPreview } from './back-preview';
 
 type CardPreviewProps = {
   card: GeneratedCard;
+  enhancement?: CardEnhancement;
+  loadingEnhancement?: boolean;
 };
 
-export function CardPreview({ card }: CardPreviewProps) {
+export function CardPreview({ card, enhancement, loadingEnhancement }: CardPreviewProps) {
   const [isFlipped, setIsFlipped] = useState(false);
 
   return (
@@ -25,12 +28,16 @@ export function CardPreview({ card }: CardPreviewProps) {
         </button>
       </div>
 
-      {/* Card Preview Container with Smooth Transition */}
+      {/* Card Preview Container */}
       <div className="relative min-h-[220px] rounded-xl border border-border/60 bg-card/70 shadow-2xs transition-all duration-300 dark:border-border/30 dark:bg-card/40">
         {!isFlipped ? (
           <FrontPreview front={card.front} />
         ) : (
-          <BackPreview back={card.back} />
+          <BackPreview
+            back={card.back}
+            enhancement={enhancement}
+            loadingEnhancement={loadingEnhancement}
+          />
         )}
       </div>
     </div>
