@@ -11,6 +11,7 @@ import { SelectionErrorState } from './selection-error-state';
 import { SelectionLoadingState } from './selection-loading-state';
 import { SettingsPage } from './settings/settings-page';
 import { TutorView } from './tutor/tutor-view';
+import { CardView } from './card-generator/card-view';
 
 const tabContent: Record<
   PanelTab,
@@ -59,6 +60,9 @@ function CompanionPanel({ initialSelectedText, onClose }: CompanionPanelProps = 
   function renderContent() {
     if (activeTab === 'tutor') {
       return <TutorView analysisResult={result} />;
+    }
+    if (activeTab === 'cards') {
+      return <CardView analysisResult={result} settings={settings} />;
     }
     if (activeTab !== 'dictionary')
       return (

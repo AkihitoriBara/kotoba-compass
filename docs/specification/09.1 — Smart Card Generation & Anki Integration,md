@@ -1,0 +1,165 @@
+# Chapter 9 — Smart Card Generation & Anki Integration
+
+## Milestone 9.1 — AI Card Enhancement
+
+### Vision
+
+The Language Analysis Engine already provides deterministic linguistic information such as readings, meanings, grammar, kanji data, and translations.
+
+The purpose of AI Card Enhancement is **not** to regenerate this information, but to enrich generated study cards with contextual learning material that is difficult to derive deterministically.
+
+The AI enhances existing cards rather than generating them.
+
+---
+
+## Architecture
+
+Language Analysis Engine
+
+↓
+
+Card Generation Engine
+
+↓
+
+GeneratedCard
+
+↓
+
+Card Enhancement Engine
+
+↓
+
+EnhancedGeneratedCard
+
+↓
+
+Card Preview
+
+↓
+
+Exporter
+
+↓
+
+AnkiConnect
+
+---
+
+## Design Goals
+
+- AI enhances cards without replacing deterministic analysis.
+- Generated cards remain editable before export.
+- Enhancement providers remain completely provider-independent.
+- Deterministic data always takes precedence over AI.
+- Enhancement requests remain inexpensive and fast.
+
+---
+
+## AI Responsibilities
+
+The AI generates only:
+
+### Example Sentence
+
+A natural Japanese sentence using the target vocabulary or grammar.
+
+---
+
+### Sentence Translation
+
+A concise English translation of the generated sentence.
+
+---
+
+### Usage Note
+
+A very short explanation such as:
+
+- Common usage
+- Formality
+- Typical nuance
+- Common learner mistake (if applicable)
+
+Maximum:
+
+2–3 short sentences.
+
+---
+
+## AI Must Never Generate
+
+The AI must never determine:
+
+- Meaning
+- Reading
+- Furigana
+- Grammar
+- Kanji information
+- JLPT level
+- Pitch accent
+- Dictionary definitions
+
+Those always come from the Language Analysis Engine.
+
+---
+
+## Enhancement Pipeline
+
+GeneratedCard
+
+↓
+
+CardEnhancementService
+
+↓
+
+CardEnhancementProvider
+
+↓
+
+EnhancedGeneratedCard
+
+---
+
+## Provider Independence
+
+The enhancement engine is provider-agnostic.
+
+Future providers include:
+
+- Gemini
+- OpenAI
+- Claude
+- OpenRouter
+- Local LLMs
+
+without modifying the UI.
+
+---
+
+## User Flow
+
+Highlight Text
+
+↓
+
+Analyze
+
+↓
+
+Generate Card
+
+↓
+
+Generate AI Enhancement
+
+↓
+
+Preview
+
+↓
+
+Export
+
+The workflow remains interruption-free.
